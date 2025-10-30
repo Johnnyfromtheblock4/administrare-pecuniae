@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { db } from "../firebaseConfig";
-import { addDoc, collection, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  updateDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 
 export default function AccountManager({
   user,
@@ -14,7 +20,8 @@ export default function AccountManager({
 
   const handleAddAccount = async (e) => {
     e.preventDefault();
-    if (!newAccount.nome || !newAccount.saldoIniziale) return alert("Compila tutti i campi!");
+    if (!newAccount.nome || !newAccount.saldoIniziale)
+      return alert("Compila tutti i campi!");
     if (!user) return alert("Devi essere loggato!");
 
     const docRef = await addDoc(collection(db, "accounts"), {
@@ -23,16 +30,25 @@ export default function AccountManager({
       uid: user.uid,
     });
 
-    const created = { id: docRef.id, ...newAccount, saldoIniziale: Number(newAccount.saldoIniziale) };
+    const created = {
+      id: docRef.id,
+      ...newAccount,
+      saldoIniziale: Number(newAccount.saldoIniziale),
+    };
     setAccounts((prev) => [...prev, created]);
     if (accounts.length === 0) setChartAccountId(created.id);
     setNewAccount({ nome: "", saldoIniziale: "" });
   };
 
   const handleEditAccount = async (id, nome, saldo) => {
-    await updateDoc(doc(db, "accounts", id), { nome, saldoIniziale: Number(saldo) });
+    await updateDoc(doc(db, "accounts", id), {
+      nome,
+      saldoIniziale: Number(saldo),
+    });
     setAccounts((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, nome, saldoIniziale: Number(saldo) } : a))
+      prev.map((a) =>
+        a.id === id ? { ...a, nome, saldoIniziale: Number(saldo) } : a
+      )
     );
     setEditAccountId(null);
   };
@@ -55,14 +71,18 @@ export default function AccountManager({
           placeholder="Nome conto"
           className="form-control w-auto"
           value={newAccount.nome}
-          onChange={(e) => setNewAccount({ ...newAccount, nome: e.target.value })}
+          onChange={(e) =>
+            setNewAccount({ ...newAccount, nome: e.target.value })
+          }
         />
         <input
           type="number"
           placeholder="Saldo iniziale €"
           className="form-control w-auto"
           value={newAccount.saldoIniziale}
-          onChange={(e) => setNewAccount({ ...newAccount, saldoIniziale: e.target.value })}
+          onChange={(e) =>
+            setNewAccount({ ...newAccount, saldoIniziale: e.target.value })
+          }
         />
         <button className="btn btn-primary">➕ Aggiungi Conto</button>
       </form>
@@ -79,13 +99,17 @@ export default function AccountManager({
                   type="text"
                   className="form-control w-auto"
                   defaultValue={a.nome}
-                  onBlur={(e) => handleEditAccount(a.id, e.target.value, a.saldoIniziale)}
+                  onBlur={(e) =>
+                    handleEditAccount(a.id, e.target.value, a.saldoIniziale)
+                  }
                 />
                 <input
                   type="number"
                   className="form-control w-auto"
                   defaultValue={a.saldoIniziale}
-                  onBlur={(e) => handleEditAccount(a.id, a.nome, e.target.value)}
+                  onBlur={(e) =>
+                    handleEditAccount(a.id, a.nome, e.target.value)
+                  }
                 />
               </>
             ) : (

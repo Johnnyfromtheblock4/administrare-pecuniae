@@ -1,89 +1,91 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { db, auth } from "../firebaseConfig";
+import React, { useEffect, useState } from "react";
+import { db } from "../firebaseConfig";
 import {
   collection,
-  getDocs,
-  query,
-  where,
+  onSnapshot,
+  deleteDoc,
+  doc,
+  updateDoc,
 } from "firebase/firestore";
 
 import AccountManager from "./AccountManager";
-import CategoryManager from "./CategoryManager";
 import TransactionForm from "./TransactionForm";
 import TransactionTable from "./TransactionTable";
+import CategoryManager from "./CategoryManager";
 import PieChartFinance from "./PieChartFinance";
-import { handleGeneratePDF } from "../utils/pdfUtils";
 
 export default function FinanceDashboard() {
   const [user, setUser] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [customCategories, setCustomCategories] = useState([]);
+  const [chartAccountId, setChartAccountId] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [chartAccountId, setChartAccountId] = useState("");
 
-  // --- AUTENTICAZIONE ---
+  // 🔥 Carica dati da Firestore
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        loadAccounts(currentUser.uid);
-        loadTransactions(currentUser.uid);
-        loadCategories(currentUser.uid);
-      }
+    const unsubAccounts = onSnapshot(collection(db, "accounts"), (snap) => {
+      setAccounts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
-    return () => unsubscribe();
+
+    const unsubTransactions = onSnapshot(
+      collection(db, "transactions"),
+      (snap) => {
+        setTransactions(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      }
+    );
+
+    return () => {
+      unsubAccounts();
+      unsubTransactions();
+    };
   }, []);
 
-  // --- FIREBASE FETCH ---
-  const loadAccounts = async (uid) => {
-    const q = query(collection(db, "accounts"), where("uid", "==", uid));
-    const snapshot = await getDocs(q);
-    const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-    setAccounts(data);
-    if (data.length > 0 && !chartAccountId) setChartAccountId(data[0].id);
-  };
+  // 🗑️ Elimina transazione e aggiorna saldo conto
+  const handleDeleteTransaction = async (t) => {
+    if (!window.confirm("Vuoi davvero eliminare questa transazione?")) return;
 
-  const loadTransactions = async (uid) => {
-    const q = query(collection(db, "transactions"), where("uid", "==", uid));
-    const snapshot = await getDocs(q);
-    setTransactions(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
-  };
+    try {
+      // Elimina la transazione da Firestore
+      await deleteDoc(doc(db, "transactions", t.id));
 
-  const loadCategories = async (uid) => {
-    const q = query(collection(db, "categories"), where("uid", "==", uid));
-    const snapshot = await getDocs(q);
-    setCustomCategories(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
-  };
+      // Trova il conto collegato
+      const account = accounts.find((a) => a.id === t.conto);
+      if (account) {
+        let nuovoSaldo = Number(account.saldoIniziale);
+        const importo = Number(t.importo);
 
-  // --- FILTRO PER TRANSAZIONI ---
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((t) => {
-      const d = new Date(t.data);
-      return (
-        d.getMonth() === selectedMonth &&
-        d.getFullYear() === selectedYear &&
-        (!chartAccountId || t.conto === chartAccountId)
-      );
-    });
-  }, [transactions, selectedMonth, selectedYear, chartAccountId]);
+        // Se elimini un'entrata, togli l'importo
+        if (t.type === "entrata") nuovoSaldo -= importo;
+        // Se elimini un'uscita o un risparmio, aggiungi l'importo
+        if (t.type === "uscita" || t.type === "risparmio")
+          nuovoSaldo += importo;
+
+        // Aggiorna il saldo su Firestore
+        await updateDoc(doc(db, "accounts", account.id), {
+          saldoIniziale: nuovoSaldo,
+        });
+
+        // Aggiorna lo stato locale
+        setAccounts((prev) =>
+          prev.map((a) =>
+            a.id === account.id ? { ...a, saldoIniziale: nuovoSaldo } : a
+          )
+        );
+      }
+
+      // Rimuovi la transazione dallo stato
+      setTransactions((prev) => prev.filter((x) => x.id !== t.id));
+      alert("Transazione eliminata con successo.");
+    } catch (err) {
+      console.error("Errore eliminazione:", err);
+      alert("Errore durante l'eliminazione. Riprova.");
+    }
+  };
 
   return (
-    <div className="container mt-5">
-      <h2 className="text-center mb-4">Gestione Finanziaria</h2>
-
-      {!user ? (
-        <p className="text-center text-danger">
-          Effettua il login per salvare e sincronizzare i tuoi dati.
-        </p>
-      ) : (
-        <p className="text-center text-success">
-          Utente loggato: <strong>{user.email}</strong>
-        </p>
-      )}
-
+    <div className="container my-5">
       <AccountManager
         user={user}
         accounts={accounts}
@@ -113,33 +115,21 @@ export default function FinanceDashboard() {
       />
 
       <TransactionTable
-        transactions={filteredTransactions}
+        transactions={transactions}
         accounts={accounts}
-        setAccounts={setAccounts}
-        setTransactions={setTransactions}
+        onDelete={handleDeleteTransaction}
       />
 
-      <div id="chart-section">
-        <PieChartFinance
-          transactions={transactions}
-          selectedMonth={selectedMonth}
-          selectedYear={selectedYear}
-          accounts={accounts}
-          selectedAccountId={chartAccountId}
-          onSelectAccount={(id) => setChartAccountId(id)}
-        />
-      </div>
-
-      <div className="text-center my-4">
-        <button
-          className="btn btn-primary"
-          onClick={() =>
-            handleGeneratePDF(selectedMonth, selectedYear, "chart-section")
-          }
-        >
-          📄 Esporta Resoconto PDF
-        </button>
-      </div>
+      <PieChartFinance
+        transactions={transactions}
+        accounts={accounts}
+        selectedAccountId={chartAccountId}
+        onSelectAccount={setChartAccountId}
+        selectedMonth={selectedMonth}
+        setSelectedMonth={setSelectedMonth}
+        selectedYear={selectedYear}
+        setSelectedYear={setSelectedYear}
+      />
     </div>
   );
 }

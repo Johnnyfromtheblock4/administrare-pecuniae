@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function TransactionTable({ transactions, deleteTransaction }) {
+export default function TransactionTable({ transactions, onDelete, accounts }) {
   if (transactions.length === 0)
     return <p className="text-center">Nessuna transazione inserita.</p>;
 
@@ -13,6 +13,7 @@ export default function TransactionTable({ transactions, deleteTransaction }) {
             <th>Tipo</th>
             <th>Categoria</th>
             <th>Importo (€)</th>
+            <th>Conto</th>
             <th></th>
           </tr>
         </thead>
@@ -24,19 +25,22 @@ export default function TransactionTable({ transactions, deleteTransaction }) {
                 className={
                   t.type === "entrata"
                     ? "text-success fw-bold"
-                    : "text-danger fw-bold"
+                    : t.type === "uscita"
+                    ? "text-danger fw-bold"
+                    : "text-primary fw-bold"
                 }
               >
                 {t.type}
               </td>
               <td>{t.categoria || "-"}</td>
               <td>{Number(t.importo).toFixed(2)}</td>
+              <td>{accounts.find((a) => a.id === t.conto)?.nome || "—"}</td>
               <td>
                 <button
                   className="btn btn-sm btn-outline-danger"
-                  onClick={() => deleteTransaction(t.id)}
+                  onClick={() => onDelete(t)}
                 >
-                  Elimina
+                  🗑️ Elimina
                 </button>
               </td>
             </tr>

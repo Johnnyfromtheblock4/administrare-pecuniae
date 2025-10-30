@@ -1,19 +1,20 @@
 import React, { useState } from "react";
-import { auth } from "../src/firebaseConfig";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { useNavigate } from "react-router-dom";
+import { auth } from "../firebaseConfig";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { useNavigate, Link } from "react-router-dom";
 
-export default function Register() {
+console.log("Auth instance:", auth);
+
+export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleRegister = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      alert("Registrazione completata!");
-      navigate("/login");
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate("/");
     } catch (error) {
       alert("Errore: " + error.message);
     }
@@ -21,9 +22,9 @@ export default function Register() {
 
   return (
     <div className="container text-center my-5">
-      <h2>Registrati</h2>
+      <h2>Accedi</h2>
       <form
-        onSubmit={handleRegister}
+        onSubmit={handleLogin}
         className="d-flex flex-column align-items-center gap-3 mt-4"
       >
         <input
@@ -37,15 +38,23 @@ export default function Register() {
         <input
           type="password"
           className="form-control w-50"
-          placeholder="Password (minimo 6 caratteri)"
+          placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
         <button type="submit" className="btn btn-success w-50">
-          Crea account
+          Accedi
         </button>
       </form>
+
+      <p className="mt-4 text-muted">
+        Non hai un account?{" "}
+        <Link to="/register" className="text-decoration-none">
+          Registrati qui
+        </Link>
+      </p>
     </div>
   );
 }
+

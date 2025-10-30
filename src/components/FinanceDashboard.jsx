@@ -4,8 +4,7 @@ import TransactionTable from "./TransactionTable";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
-// ✅ percorso corretto dato che firebaseConfig.js è in src/
-import { db, auth } from "../src/firebaseConfig";
+import { db, auth } from "../firebaseConfig";
 import {
   collection,
   addDoc,

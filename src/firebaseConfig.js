@@ -1,18 +1,20 @@
 // src/firebaseConfig.js
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// ⬇️ Copia questi dati dal tuo progetto Firebase
 const firebaseConfig = {
-  apiKey: "API_KEY",
+  apiKey: "AIzaSyDHU0qzRnmjdClRYnnJb6JmNgBoQ5WyFxk",
   authDomain: "administrare-pecuniae.firebaseapp.com",
   projectId: "administrare-pecuniae",
   storageBucket: "administrare-pecuniae.appspot.com",
-  messagingSenderId: "XXXXXXX",
-  appId: "XXXXXXXXXXXXX",
+  messagingSenderId: "792587253089",
+  appId: "1:792587253089:web:1fc37644b72eba461fc120",
 };
 
-const app = initializeApp(firebaseConfig);
+// 🔥 Usa sempre la stessa istanza
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+// Esporta Auth e Firestore
 export const auth = getAuth(app);
 export const db = getFirestore(app);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { auth } from "../src/firebaseConfig";
+import { auth } from "../firebaseConfig";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 
 const Header = () => {

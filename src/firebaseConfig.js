@@ -1,20 +1,16 @@
-// src/firebaseConfig.js
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDHU0qzRnmjdClRYnnJb6JmNgBoQ5WyFxk",
-  authDomain: "administrare-pecuniae.firebaseapp.com",
-  projectId: "administrare-pecuniae",
-  storageBucket: "administrare-pecuniae.appspot.com",
-  messagingSenderId: "792587253089",
-  appId: "1:792587253089:web:1fc37644b72eba461fc120",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// 🔥 Usa sempre la stessa istanza
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
-// Esporta Auth e Firestore
 export const auth = getAuth(app);
 export const db = getFirestore(app);

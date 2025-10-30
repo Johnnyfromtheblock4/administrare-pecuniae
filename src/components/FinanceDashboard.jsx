@@ -34,8 +34,6 @@ export default function FinanceDashboard() {
   const [newCategoryType, setNewCategoryType] = useState("entrata");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-
-  // NEW: conto selezionato per i grafici (default: primo inserito)
   const [chartAccountId, setChartAccountId] = useState("");
 
   // 🔐 Autenticazione
@@ -65,21 +63,25 @@ export default function FinanceDashboard() {
     const snapshot = await getDocs(q);
     const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     setAccounts(data);
-
-    // set default chart account if none selected
+    // default: primo conto
     if (data.length > 0 && !chartAccountId) {
       setChartAccountId(data[0].id);
+      setForm((f) => ({ ...f, conto: data[0].id }));
     }
   };
 
-  // Se cambia la lista conti (es. delete del conto selezionato), riallinea la scelta grafici
+  // riallinea conto selezionato se viene eliminato
   useEffect(() => {
     if (accounts.length === 0) {
       setChartAccountId("");
+      setForm((f) => ({ ...f, conto: "" }));
       return;
     }
     const exists = accounts.some((a) => a.id === chartAccountId);
-    if (!exists) setChartAccountId(accounts[0].id);
+    if (!exists) {
+      setChartAccountId(accounts[0].id);
+      setForm((f) => ({ ...f, conto: accounts[0].id }));
+    }
   }, [accounts]); // eslint-disable-line
 
   // 🗂️ Carica categorie personalizzate
@@ -110,8 +112,10 @@ export default function FinanceDashboard() {
     };
     setAccounts((prev) => {
       const next = [...prev, created];
-      // se è il primo conto, diventare default per grafici
-      if (prev.length === 0) setChartAccountId(created.id);
+      if (prev.length === 0) {
+        setChartAccountId(created.id);
+        setForm((f) => ({ ...f, conto: created.id }));
+      }
       return next;
     });
     setNewAccount({ nome: "", saldoIniziale: "" });
@@ -141,7 +145,7 @@ export default function FinanceDashboard() {
     setAccounts((prev) => prev.filter((a) => a.id !== id));
   };
 
-  // ➕ Aggiungi categoria con tipo
+  // ➕ Aggiungi categoria
   const handleAddCategory = async () => {
     if (!newCategory.trim() || !user) return;
     const docRef = await addDoc(collection(db, "categories"), {
@@ -156,7 +160,7 @@ export default function FinanceDashboard() {
     setNewCategory("");
   };
 
-  // ✏️ Modifica categoria (nome o tipo)
+  // ✏️ Modifica categoria
   const handleEditCategory = async (id, nome, tipo) => {
     const ref = doc(db, "categories", id);
     await updateDoc(ref, { nome, tipo });
@@ -213,15 +217,17 @@ export default function FinanceDashboard() {
     ...customCategories.filter((c) => c.tipo === form.type).map((c) => c.nome),
   ];
 
-  // 📅 Filtro mese/anno per tabella
+  // 📅 Filtro per tabella/grafici: mese/anno/conto selezionati
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
       const date = new Date(t.data);
-      return (
-        date.getMonth() === selectedMonth && date.getFullYear() === selectedYear
-      );
+      const matchMeseAnno =
+        date.getMonth() === selectedMonth &&
+        date.getFullYear() === selectedYear;
+      const matchConto = chartAccountId ? t.conto === chartAccountId : true;
+      return matchMeseAnno && matchConto;
     });
-  }, [transactions, selectedMonth, selectedYear]);
+  }, [transactions, selectedMonth, selectedYear, chartAccountId]);
 
   const months = [
     "Gennaio",
@@ -238,14 +244,14 @@ export default function FinanceDashboard() {
     "Dicembre",
   ];
 
-  // ➕ Aggiungi transazione (aggiornamento saldo immediato)
+  // ➕ Aggiungi transazione (uso chartAccountId come conto sorgente)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.importo || !form.data || !form.categoria || !form.conto)
+    if (!form.importo || !form.data || !form.categoria || !chartAccountId)
       return alert("Compila tutti i campi!");
 
     const importoNum = Number(form.importo);
-    const selectedAccount = accounts.find((a) => a.id === form.conto);
+    const selectedAccount = accounts.find((a) => a.id === chartAccountId);
     if (!selectedAccount) return alert("Conto non valido");
 
     let nuovoSaldo = selectedAccount.saldoIniziale;
@@ -265,22 +271,27 @@ export default function FinanceDashboard() {
 
     const docRef = await addDoc(collection(db, "transactions"), {
       ...form,
+      conto: chartAccountId, // forza il conto selezionato in alto
       importo: importoNum,
       uid: user.uid,
       createdAt: new Date(),
     });
 
-    setTransactions((prev) => [...prev, { id: docRef.id, ...form }]);
-    setForm({
+    setTransactions((prev) => [
+      ...prev,
+      { id: docRef.id, ...form, conto: chartAccountId },
+    ]);
+    setForm((f) => ({
+      ...f,
       type: "entrata",
       categoria: "",
       importo: "",
       data: "",
-      conto: "",
-    });
+      conto: chartAccountId,
+    }));
   };
 
-  // 📄 Esporta PDF (resta identico)
+  // 📄 Esporta PDF (grafico della sezione)
   const handleGeneratePDF = async () => {
     const docPdf = new jsPDF({
       orientation: "portrait",
@@ -289,10 +300,7 @@ export default function FinanceDashboard() {
     });
     const monthName = new Date(selectedYear, selectedMonth).toLocaleString(
       "it-IT",
-      {
-        month: "long",
-        year: "numeric",
-      }
+      { month: "long", year: "numeric" }
     );
 
     docPdf.setFontSize(18);
@@ -306,41 +314,6 @@ export default function FinanceDashboard() {
       const imgData = canvas.toDataURL("image/png");
       docPdf.addImage(imgData, "PNG", 20, 60, 350, 250);
     }
-
-    let y = 330;
-    docPdf.setFontSize(14);
-    docPdf.text("Entrate", 20, y);
-    y += 10;
-    const entrate = filteredTransactions.filter((t) => t.type === "entrata");
-    const uscite = filteredTransactions.filter((t) => t.type === "uscita");
-
-    docPdf.setFontSize(10);
-    entrate.forEach((t) => {
-      docPdf.text(
-        `${t.data} - ${t.categoria} - €${Number(t.importo).toFixed(2)}`,
-        25,
-        (y += 15)
-      );
-    });
-
-    if (y > 700) {
-      docPdf.addPage();
-      y = 30;
-    } else {
-      y += 30;
-    }
-
-    docPdf.setFontSize(14);
-    docPdf.text("Uscite", 20, y);
-    y += 10;
-    docPdf.setFontSize(10);
-    uscite.forEach((t) => {
-      docPdf.text(
-        `${t.data} - ${t.categoria} - €${Number(t.importo).toFixed(2)}`,
-        25,
-        (y += 15)
-      );
-    });
 
     docPdf.save(`Resoconto-${monthName}.pdf`);
   };
@@ -502,47 +475,22 @@ export default function FinanceDashboard() {
           ))}
         </ul>
       </div>
-      {/* 🎯 SEZIONE SELEZIONE POSIZIONE TRANSAZIONE */}
-      <div className="card p-3 mb-4">
-        <h5 className="mb-3">Seleziona dove inserire la transazione</h5>
 
-        <div className="d-flex flex-wrap justify-content-center align-items-center gap-3">
-          {/* 📅 Mese */}
-          <select
-            className="form-select w-auto"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(Number(e.target.value))}
-          >
-            {months.map((m, i) => (
-              <option key={i} value={i}>
-                {m}
-              </option>
-            ))}
-          </select>
+      {/* 🧾 SEZIONE TRANSAZIONI (integra selezione mese/anno/conto) */}
+      <div className="card p-3 mb-5">
+        <h5 className="mb-3">Aggiungi transazione</h5>
 
-          {/* 📆 Anno */}
-          <select
-            className="form-select w-auto"
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-          >
-            {Array.from(
-              { length: 5 },
-              (_, i) => new Date().getFullYear() - i
-            ).map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-
-          {/* 🏦 Selezione conto per grafici e inserimento */}
+        {/* Select conto */}
+        <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-3">
           <select
             className="form-select w-auto"
             value={chartAccountId}
-            onChange={(e) => setChartAccountId(e.target.value)}
+            onChange={(e) => {
+              setChartAccountId(e.target.value);
+              setForm((f) => ({ ...f, conto: e.target.value }));
+            }}
             disabled={accounts.length === 0}
-            title="Conto per i grafici"
+            title="Conto per grafici e inserimento"
           >
             {accounts.length === 0 ? (
               <option value="">Nessun conto disponibile</option>
@@ -555,11 +503,8 @@ export default function FinanceDashboard() {
             )}
           </select>
         </div>
-      </div>
 
-      {/* 🧾 SEZIONE TRANSAZIONI */}
-      <div className="card p-3 mb-5">
-        <h5 className="mb-3">Aggiungi transazione</h5>
+        {/* Form inserimento */}
         <form
           onSubmit={handleSubmit}
           className="d-flex flex-wrap justify-content-center gap-3 mb-4"
@@ -585,20 +530,6 @@ export default function FinanceDashboard() {
             {categorie.map((c, i) => (
               <option key={i} value={c}>
                 {c}
-              </option>
-            ))}
-          </select>
-
-          <select
-            name="conto"
-            className="form-select w-auto"
-            value={form.conto}
-            onChange={(e) => setForm({ ...form, conto: e.target.value })}
-          >
-            <option value="">Seleziona conto...</option>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.nome}
               </option>
             ))}
           </select>
@@ -670,6 +601,7 @@ export default function FinanceDashboard() {
           }}
         />
       </div>
+
       {/* 🥧 GRAFICI (per conto selezionato) */}
       <div id="chart-section">
         <PieChartFinance
@@ -678,7 +610,10 @@ export default function FinanceDashboard() {
           selectedYear={selectedYear}
           accounts={accounts}
           selectedAccountId={chartAccountId}
-          onSelectAccount={setChartAccountId}
+          onSelectAccount={(id) => {
+            setChartAccountId(id);
+            setForm((f) => ({ ...f, conto: id }));
+          }}
         />
       </div>
 

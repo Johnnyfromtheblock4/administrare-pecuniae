@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import PieChartFinance from "./PieChartFinance";
 import TransactionTable from "./TransactionTable";
 import jsPDF from "jspdf";
@@ -25,8 +25,10 @@ export default function FinanceDashboard() {
     data: "",
   });
   const [user, setUser] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // 🔐 Ascolta lo stato dell’utente autenticato
+  // 🔐 Ascolta stato utente
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -35,7 +37,7 @@ export default function FinanceDashboard() {
     return () => unsubscribe();
   }, []);
 
-  // 📥 Carica transazioni da Firestore
+  // 📥 Carica transazioni
   const loadTransactions = async (uid) => {
     const q = query(collection(db, "transactions"), where("uid", "==", uid));
     const snapshot = await getDocs(q);
@@ -43,7 +45,7 @@ export default function FinanceDashboard() {
     setTransactions(data);
   };
 
-  // ➕ Aggiungi transazione su Firestore
+  // ➕ Aggiungi transazione
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.importo || !form.data || !form.categoria)
@@ -61,7 +63,7 @@ export default function FinanceDashboard() {
     setForm({ type: "entrata", categoria: "", importo: "", data: "" });
   };
 
-  // 🗑️ Elimina transazione da Firestore
+  // 🗑️ Elimina transazione
   const deleteTransaction = async (id) => {
     try {
       await deleteDoc(doc(db, "transactions", id));
@@ -69,6 +71,81 @@ export default function FinanceDashboard() {
     } catch (error) {
       console.error("Errore eliminazione:", error);
     }
+  };
+
+  // 📅 Filtra per mese/anno selezionato
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      const date = new Date(t.data);
+      return (
+        date.getMonth() === selectedMonth && date.getFullYear() === selectedYear
+      );
+    });
+  }, [transactions, selectedMonth, selectedYear]);
+
+  // 📄 Genera PDF
+  const handleGeneratePDF = async () => {
+    const docPdf = new jsPDF({
+      orientation: "portrait",
+      unit: "px",
+      format: "a4",
+    });
+
+    const monthName = new Date(selectedYear, selectedMonth).toLocaleString(
+      "it-IT",
+      { month: "long", year: "numeric" }
+    );
+
+    docPdf.setFontSize(18);
+    docPdf.text(`Resoconto Finanziario - ${monthName}`, 20, 30);
+    docPdf.setFontSize(12);
+    docPdf.text("Administrare Pecuniae", 20, 50);
+
+    const chartEl = document.getElementById("chart-section");
+    if (chartEl) {
+      const canvas = await html2canvas(chartEl);
+      const imgData = canvas.toDataURL("image/png");
+      docPdf.addImage(imgData, "PNG", 20, 60, 350, 250);
+    }
+
+    let y = 330;
+    docPdf.setFontSize(14);
+    docPdf.text("Entrate", 20, y);
+    y += 10;
+
+    const entrate = filteredTransactions.filter((t) => t.type === "entrata");
+    const uscite = filteredTransactions.filter((t) => t.type === "uscita");
+
+    docPdf.setFontSize(10);
+    entrate.forEach((t) => {
+      docPdf.text(
+        `${t.data} - ${t.categoria} - €${Number(t.importo).toFixed(2)}`,
+        25,
+        (y += 15)
+      );
+    });
+
+    if (y > 700) {
+      docPdf.addPage();
+      y = 30;
+    } else {
+      y += 30;
+    }
+
+    docPdf.setFontSize(14);
+    docPdf.text("Uscite", 20, y);
+    y += 10;
+    docPdf.setFontSize(10);
+
+    uscite.forEach((t) => {
+      docPdf.text(
+        `${t.data} - ${t.categoria} - €${Number(t.importo).toFixed(2)}`,
+        25,
+        (y += 15)
+      );
+    });
+
+    docPdf.save(`Resoconto-${monthName}.pdf`);
   };
 
   // 📂 Categorie
@@ -100,69 +177,20 @@ export default function FinanceDashboard() {
     "Altre rate",
   ];
 
-  // 📄 Genera PDF (identico al tuo)
-  const handleGeneratePDF = async () => {
-    const docPdf = new jsPDF({
-      orientation: "portrait",
-      unit: "px",
-      format: "a4",
-    });
-    const currentMonth = new Date().toLocaleString("it-IT", {
-      month: "long",
-      year: "numeric",
-    });
-
-    docPdf.setFontSize(18);
-    docPdf.text(`Resoconto Finanziario - ${currentMonth}`, 20, 30);
-    docPdf.setFontSize(12);
-    docPdf.text("Administrare Pecuniae", 20, 50);
-
-    const chartEl = document.getElementById("chart-section");
-    if (chartEl) {
-      const canvas = await html2canvas(chartEl);
-      const imgData = canvas.toDataURL("image/png");
-      docPdf.addImage(imgData, "PNG", 20, 60, 350, 250);
-    }
-
-    let y = 330;
-    docPdf.setFontSize(14);
-    docPdf.text("Entrate", 20, y);
-    y += 10;
-
-    const entrate = transactions.filter((t) => t.type === "entrata");
-    const uscite = transactions.filter((t) => t.type === "uscita");
-
-    docPdf.setFontSize(10);
-    entrate.forEach((t) => {
-      docPdf.text(
-        `${t.data} - ${t.categoria} - €${Number(t.importo).toFixed(2)}`,
-        25,
-        (y += 15)
-      );
-    });
-
-    if (y > 700) {
-      docPdf.addPage();
-      y = 30;
-    } else {
-      y += 30;
-    }
-
-    docPdf.setFontSize(14);
-    docPdf.text("Uscite", 20, y);
-    y += 10;
-    docPdf.setFontSize(10);
-
-    uscite.forEach((t) => {
-      docPdf.text(
-        `${t.data} - ${t.categoria} - €${Number(t.importo).toFixed(2)}`,
-        25,
-        (y += 15)
-      );
-    });
-
-    docPdf.save(`Resoconto-${currentMonth}.pdf`);
-  };
+  const months = [
+    "Gennaio",
+    "Febbraio",
+    "Marzo",
+    "Aprile",
+    "Maggio",
+    "Giugno",
+    "Luglio",
+    "Agosto",
+    "Settembre",
+    "Ottobre",
+    "Novembre",
+    "Dicembre",
+  ];
 
   return (
     <div className="container mt-5">
@@ -178,7 +206,37 @@ export default function FinanceDashboard() {
         </p>
       )}
 
-      {/* 🧾 Form */}
+      {/* 📆 Filtro Mese/Anno */}
+      <div className="d-flex justify-content-center align-items-center gap-3 mb-4">
+        <select
+          className="form-select w-auto"
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(Number(e.target.value))}
+        >
+          {months.map((m, i) => (
+            <option key={i} value={i}>
+              {m}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="form-select w-auto"
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(Number(e.target.value))}
+        >
+          {Array.from(
+            { length: 5 },
+            (_, i) => new Date().getFullYear() - i
+          ).map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* 🧾 Form Aggiunta */}
       <form
         onSubmit={handleSubmit}
         className="d-flex flex-wrap justify-content-center gap-3 mb-5"
@@ -229,13 +287,19 @@ export default function FinanceDashboard() {
         </button>
       </form>
 
+      {/* 📋 Tabella */}
       <TransactionTable
-        transactions={transactions}
+        transactions={filteredTransactions}
         deleteTransaction={deleteTransaction}
       />
 
+      {/* 🥧 Grafici */}
       <div id="chart-section">
-        <PieChartFinance transactions={transactions} />
+        <PieChartFinance
+          transactions={transactions}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+        />
       </div>
 
       <div className="text-center my-4">

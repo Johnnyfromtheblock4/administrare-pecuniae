@@ -25,16 +25,23 @@ export default function PieChartFinance({
   transactions,
   selectedMonth,
   selectedYear,
+  accounts,
+  selectedAccountId,
+  onSelectAccount,
 }) {
-  // 🎯 Filtra per mese/anno selezionati
-  const monthTransactions = useMemo(() => {
+  // 🎯 Filtra per mese/anno e conto
+  const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
       const date = new Date(t.data);
-      return (
-        date.getMonth() === selectedMonth && date.getFullYear() === selectedYear
-      );
+      const isSameMonth =
+        date.getMonth() === selectedMonth &&
+        date.getFullYear() === selectedYear;
+      const isSameAccount = selectedAccountId
+        ? t.conto === selectedAccountId
+        : true;
+      return isSameMonth && isSameAccount;
     });
-  }, [transactions, selectedMonth, selectedYear]);
+  }, [transactions, selectedMonth, selectedYear, selectedAccountId]);
 
   const groupByCategory = (list) => {
     const result = {};
@@ -47,39 +54,71 @@ export default function PieChartFinance({
 
   const entrateData = useMemo(() => {
     return groupByCategory(
-      monthTransactions.filter((t) => t.type === "entrata")
+      filteredTransactions.filter((t) => t.type === "entrata")
     );
-  }, [monthTransactions]);
+  }, [filteredTransactions]);
 
   const usciteData = useMemo(() => {
     return groupByCategory(
-      monthTransactions.filter((t) => t.type === "uscita")
+      filteredTransactions.filter((t) => t.type === "uscita")
     );
-  }, [monthTransactions]);
+  }, [filteredTransactions]);
+
+  const risparmiData = useMemo(() => {
+    return groupByCategory(
+      filteredTransactions.filter((t) => t.type === "risparmio")
+    );
+  }, [filteredTransactions]);
+
+  const monthLabel = new Date(selectedYear, selectedMonth).toLocaleString(
+    "it-IT",
+    {
+      month: "long",
+      year: "numeric",
+    }
+  );
 
   return (
     <div className="my-5">
-      <h4 className="text-center mb-4">
-        Bilancio di{" "}
-        {new Date(selectedYear, selectedMonth).toLocaleString("it-IT", {
-          month: "long",
-          year: "numeric",
-        })}
-      </h4>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h4 className="mb-0">
+          Bilancio di {monthLabel}
+          {selectedAccountId &&
+            ` • ${
+              accounts.find((a) => a.id === selectedAccountId)?.nome ||
+              "Conto selezionato"
+            }`}
+        </h4>
+
+        {/* 🏦 Selettore conto */}
+        {accounts.length > 0 && (
+          <select
+            className="form-select w-auto"
+            value={selectedAccountId}
+            onChange={(e) => onSelectAccount(e.target.value)}
+          >
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nome}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       <div className="row">
         {/* Entrate */}
-        <div className="col-md-6 col-12 mb-4">
+        <div className="col-lg-4 col-md-6 col-12 mb-4">
           <h5 className="text-center text-success">Entrate</h5>
           {entrateData.length > 0 ? (
-            <div style={{ width: "100%", height: 400 }}>
+            <div style={{ width: "100%", height: 350 }}>
               <ResponsiveContainer>
                 <PieChart>
                   <Pie
                     data={entrateData}
                     dataKey="value"
                     nameKey="name"
-                    outerRadius={150}
+                    outerRadius={120}
                     cx="50%"
                     cy="50%"
                     label
@@ -101,17 +140,17 @@ export default function PieChartFinance({
         </div>
 
         {/* Uscite */}
-        <div className="col-md-6 col-12 mb-4">
+        <div className="col-lg-4 col-md-6 col-12 mb-4">
           <h5 className="text-center text-danger">Uscite</h5>
           {usciteData.length > 0 ? (
-            <div style={{ width: "100%", height: 400 }}>
+            <div style={{ width: "100%", height: 350 }}>
               <ResponsiveContainer>
                 <PieChart>
                   <Pie
                     data={usciteData}
                     dataKey="value"
                     nameKey="name"
-                    outerRadius={150}
+                    outerRadius={120}
                     cx="50%"
                     cy="50%"
                     label
@@ -128,6 +167,38 @@ export default function PieChartFinance({
           ) : (
             <p className="text-center text-muted">
               Nessuna uscita per questo mese.
+            </p>
+          )}
+        </div>
+
+        {/* Risparmi */}
+        <div className="col-lg-4 col-md-6 col-12 mb-4">
+          <h5 className="text-center text-primary">Risparmi</h5>
+          {risparmiData.length > 0 ? (
+            <div style={{ width: "100%", height: 350 }}>
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={risparmiData}
+                    dataKey="value"
+                    nameKey="name"
+                    outerRadius={120}
+                    cx="50%"
+                    cy="50%"
+                    label
+                  >
+                    {risparmiData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="text-center text-muted">
+              Nessun risparmio per questo mese.
             </p>
           )}
         </div>

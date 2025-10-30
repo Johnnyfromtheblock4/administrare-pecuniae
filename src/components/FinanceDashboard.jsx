@@ -502,127 +502,174 @@ export default function FinanceDashboard() {
           ))}
         </ul>
       </div>
+      {/* 🎯 SEZIONE SELEZIONE POSIZIONE TRANSAZIONE */}
+      <div className="card p-3 mb-4">
+        <h5 className="mb-3">Seleziona dove inserire la transazione</h5>
 
-      {/* 📆 FILTRI */}
-      <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-4">
-        <select
-          className="form-select w-auto"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(Number(e.target.value))}
-        >
-          {months.map((m, i) => (
-            <option key={i} value={i}>
-              {m}
-            </option>
-          ))}
-        </select>
+        <div className="d-flex flex-wrap justify-content-center align-items-center gap-3">
+          {/* 📅 Mese */}
+          <select
+            className="form-select w-auto"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+          >
+            {months.map((m, i) => (
+              <option key={i} value={i}>
+                {m}
+              </option>
+            ))}
+          </select>
 
-        <select
-          className="form-select w-auto"
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(Number(e.target.value))}
-        >
-          {Array.from(
-            { length: 5 },
-            (_, i) => new Date().getFullYear() - i
-          ).map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
+          {/* 📆 Anno */}
+          <select
+            className="form-select w-auto"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+          >
+            {Array.from(
+              { length: 5 },
+              (_, i) => new Date().getFullYear() - i
+            ).map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
 
-        {/* NEW: filtro conto per grafici */}
-        <select
-          className="form-select w-auto"
-          value={chartAccountId}
-          onChange={(e) => setChartAccountId(e.target.value)}
-          disabled={accounts.length === 0}
-          title="Conto per i grafici"
-        >
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.nome}
-            </option>
-          ))}
-        </select>
+          {/* 🏦 Selezione conto per grafici e inserimento */}
+          <select
+            className="form-select w-auto"
+            value={chartAccountId}
+            onChange={(e) => setChartAccountId(e.target.value)}
+            disabled={accounts.length === 0}
+            title="Conto per i grafici"
+          >
+            {accounts.length === 0 ? (
+              <option value="">Nessun conto disponibile</option>
+            ) : (
+              accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.nome}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
       </div>
 
-      {/* 🧾 FORM TRANSAZIONI */}
-      <form
-        onSubmit={handleSubmit}
-        className="d-flex flex-wrap justify-content-center gap-3 mb-5"
-      >
-        <select
-          name="type"
-          className="form-select w-auto"
-          value={form.type}
-          onChange={(e) => setForm({ ...form, type: e.target.value })}
+      {/* 🧾 SEZIONE TRANSAZIONI */}
+      <div className="card p-3 mb-5">
+        <h5 className="mb-3">Aggiungi transazione</h5>
+        <form
+          onSubmit={handleSubmit}
+          className="d-flex flex-wrap justify-content-center gap-3 mb-4"
         >
-          <option value="entrata">Entrata</option>
-          <option value="uscita">Uscita</option>
-          <option value="risparmio">Risparmio</option>
-        </select>
+          <select
+            name="type"
+            className="form-select w-auto"
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+          >
+            <option value="entrata">Entrata</option>
+            <option value="uscita">Uscita</option>
+            <option value="risparmio">Risparmio</option>
+          </select>
 
-        <select
-          name="categoria"
-          className="form-select w-auto"
-          value={form.categoria}
-          onChange={(e) => setForm({ ...form, categoria: e.target.value })}
-        >
-          <option value="">Seleziona categoria...</option>
-          {categorie.map((c, i) => (
-            <option key={i} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+          <select
+            name="categoria"
+            className="form-select w-auto"
+            value={form.categoria}
+            onChange={(e) => setForm({ ...form, categoria: e.target.value })}
+          >
+            <option value="">Seleziona categoria...</option>
+            {categorie.map((c, i) => (
+              <option key={i} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
 
-        <select
-          name="conto"
-          className="form-select w-auto"
-          value={form.conto}
-          onChange={(e) => setForm({ ...form, conto: e.target.value })}
-        >
-          <option value="">Seleziona conto...</option>
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.nome}
-            </option>
-          ))}
-        </select>
+          <select
+            name="conto"
+            className="form-select w-auto"
+            value={form.conto}
+            onChange={(e) => setForm({ ...form, conto: e.target.value })}
+          >
+            <option value="">Seleziona conto...</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nome}
+              </option>
+            ))}
+          </select>
 
-        <input
-          type="number"
-          name="importo"
-          className="form-control w-auto"
-          placeholder="Importo €"
-          value={form.importo}
-          onChange={(e) => setForm({ ...form, importo: e.target.value })}
+          <input
+            type="number"
+            name="importo"
+            className="form-control w-auto"
+            placeholder="Importo €"
+            value={form.importo}
+            onChange={(e) => setForm({ ...form, importo: e.target.value })}
+          />
+
+          <input
+            type="date"
+            name="data"
+            className="form-control w-auto"
+            value={form.data}
+            onChange={(e) => setForm({ ...form, data: e.target.value })}
+          />
+
+          <button type="submit" className="btn btn-success">
+            Aggiungi
+          </button>
+        </form>
+      </div>
+
+      {/* 📋 SEZIONE ELENCO TRANSAZIONI */}
+      <div className="card p-3 mb-5">
+        <h5 className="mb-3">Elenco transazioni</h5>
+        <TransactionTable
+          transactions={filteredTransactions}
+          deleteTransaction={async (id) => {
+            const tx = transactions.find((t) => t.id === id);
+            if (!tx) return;
+
+            const imp = Number(tx.importo) || 0;
+            const contoId = tx.conto;
+            const account = accounts.find((a) => a.id === contoId);
+            if (!account) {
+              await deleteDoc(doc(db, "transactions", id));
+              setTransactions((prev) => prev.filter((t) => t.id !== id));
+              return;
+            }
+
+            try {
+              await deleteDoc(doc(db, "transactions", id));
+              setTransactions((prev) => prev.filter((t) => t.id !== id));
+
+              let delta = 0;
+              if (tx.type === "entrata") delta = -imp;
+              if (tx.type === "uscita" || tx.type === "risparmio") delta = +imp;
+
+              const nuovoSaldo = (Number(account.saldoIniziale) || 0) + delta;
+
+              await updateDoc(doc(db, "accounts", contoId), {
+                saldoIniziale: nuovoSaldo,
+              });
+
+              setAccounts((prev) =>
+                prev.map((a) =>
+                  a.id === contoId ? { ...a, saldoIniziale: nuovoSaldo } : a
+                )
+              );
+            } catch (err) {
+              console.error("Errore eliminazione transazione:", err);
+              alert("Errore durante l'eliminazione. Riprova.");
+            }
+          }}
         />
-
-        <input
-          type="date"
-          name="data"
-          className="form-control w-auto"
-          value={form.data}
-          onChange={(e) => setForm({ ...form, data: e.target.value })}
-        />
-
-        <button type="submit" className="btn btn-success">
-          Aggiungi
-        </button>
-      </form>
-
-      {/* 📋 TABELLA TRANSAZIONI */}
-      <TransactionTable
-        transactions={filteredTransactions}
-        deleteTransaction={async (id) => {
-          await deleteDoc(doc(db, "transactions", id));
-          setTransactions((prev) => prev.filter((t) => t.id !== id));
-        }}
-      />
-
+      </div>
       {/* 🥧 GRAFICI (per conto selezionato) */}
       <div id="chart-section">
         <PieChartFinance

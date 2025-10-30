@@ -24,19 +24,17 @@ export default function AccountManager({
       return alert("Compila tutti i campi!");
     if (!user) return alert("Devi essere loggato!");
 
+    // 🔥 Aggiunge il conto su Firestore (lo snapshot aggiornerà lo stato)
     const docRef = await addDoc(collection(db, "accounts"), {
       nome: newAccount.nome,
       saldoIniziale: Number(newAccount.saldoIniziale),
       uid: user.uid,
     });
 
-    const created = {
-      id: docRef.id,
-      ...newAccount,
-      saldoIniziale: Number(newAccount.saldoIniziale),
-    };
-    setAccounts((prev) => [...prev, created]);
-    if (accounts.length === 0) setChartAccountId(created.id);
+    // Se non ci sono conti, imposta subito il nuovo conto come selezionato
+    if (accounts.length === 0) setChartAccountId(docRef.id);
+
+    // Pulisce i campi
     setNewAccount({ nome: "", saldoIniziale: "" });
   };
 

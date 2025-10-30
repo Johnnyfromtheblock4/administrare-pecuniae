@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { db } from "../firebaseConfig";
+import { onAuthStateChanged } from "firebase/auth";
+import { db, auth } from "../firebaseConfig";
 import {
   collection,
   onSnapshot,
@@ -23,51 +24,73 @@ export default function FinanceDashboard() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // 🔥 Carica dati da Firestore
+  // 🔑 1️⃣ Rileva se l'utente è loggato
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+      } else {
+        setUser(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 🔥 2️⃣ Carica dati in tempo reale da Firestore
+  useEffect(() => {
+    if (!user) return; // Evita di caricare se non loggato
+
     const unsubAccounts = onSnapshot(collection(db, "accounts"), (snap) => {
-      setAccounts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      const data = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((acc) => acc.uid === user.uid);
+      setAccounts(data);
     });
 
     const unsubTransactions = onSnapshot(
       collection(db, "transactions"),
       (snap) => {
-        setTransactions(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        const data = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .filter((tx) => tx.uid === user.uid);
+        setTransactions(data);
       }
     );
+
+    const unsubCategories = onSnapshot(collection(db, "categories"), (snap) => {
+      const data = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((c) => c.uid === user.uid);
+      setCustomCategories(data);
+    });
 
     return () => {
       unsubAccounts();
       unsubTransactions();
+      unsubCategories();
     };
-  }, []);
+  }, [user]);
 
-  // 🗑️ Elimina transazione e aggiorna saldo conto
+  // 🗑️ 3️⃣ Elimina transazione e aggiorna saldo del conto
   const handleDeleteTransaction = async (t) => {
     if (!window.confirm("Vuoi davvero eliminare questa transazione?")) return;
 
     try {
-      // Elimina la transazione da Firestore
       await deleteDoc(doc(db, "transactions", t.id));
 
-      // Trova il conto collegato
       const account = accounts.find((a) => a.id === t.conto);
       if (account) {
         let nuovoSaldo = Number(account.saldoIniziale);
         const importo = Number(t.importo);
 
-        // Se elimini un'entrata, togli l'importo
         if (t.type === "entrata") nuovoSaldo -= importo;
-        // Se elimini un'uscita o un risparmio, aggiungi l'importo
         if (t.type === "uscita" || t.type === "risparmio")
           nuovoSaldo += importo;
 
-        // Aggiorna il saldo su Firestore
         await updateDoc(doc(db, "accounts", account.id), {
           saldoIniziale: nuovoSaldo,
         });
 
-        // Aggiorna lo stato locale
         setAccounts((prev) =>
           prev.map((a) =>
             a.id === account.id ? { ...a, saldoIniziale: nuovoSaldo } : a
@@ -75,7 +98,6 @@ export default function FinanceDashboard() {
         );
       }
 
-      // Rimuovi la transazione dallo stato
       setTransactions((prev) => prev.filter((x) => x.id !== t.id));
       alert("Transazione eliminata con successo.");
     } catch (err) {
@@ -84,8 +106,22 @@ export default function FinanceDashboard() {
     }
   };
 
+  // 🔐 Se non loggato, mostra avviso
+  if (!user) {
+    return (
+      <div className="text-center my-5">
+        <h4>🔒 Effettua il login per accedere alla tua area finanziaria</h4>
+      </div>
+    );
+  }
+
+  // ✅ 4️⃣ Mostra dashboard se loggato
   return (
     <div className="container my-5">
+      <h2 className="text-center mb-4">
+        Benvenuto, <span className="text-success">{user.email}</span>
+      </h2>
+
       <AccountManager
         user={user}
         accounts={accounts}

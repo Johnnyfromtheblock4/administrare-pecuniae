@@ -119,7 +119,7 @@ export default function FinanceDashboard() {
   return (
     <div className="container my-5">
       <h2 className="text-center mb-4">
-        Benvenuto, <span className="text-success">{user.email}</span>
+        Benvenuto, <span className="text-primary">{user.email}</span>
       </h2>
 
       <AccountManager

@@ -10,7 +10,6 @@ export default function TransactionForm({
   customCategories,
   selectedMonth,
   setSelectedMonth,
-  selectedYear,
   setSelectedYear,
 }) {
   const [form, setForm] = useState({
@@ -48,7 +47,7 @@ export default function TransactionForm({
     if (form.type === "uscita" || form.type === "risparmio")
       nuovoSaldo -= importoNum;
 
-    // Aggiorna saldo conto
+    // 🔄 Aggiorna saldo conto
     await updateDoc(doc(db, "accounts", selectedAccount.id), {
       saldoIniziale: nuovoSaldo,
     });
@@ -62,7 +61,7 @@ export default function TransactionForm({
       createdAt: new Date(),
     });
 
-    // Reset campi
+    // Reset form
     setForm({
       type: "entrata",
       categoria: "",
@@ -72,26 +71,11 @@ export default function TransactionForm({
     });
   };
 
-  const months = [
-    "Gennaio",
-    "Febbraio",
-    "Marzo",
-    "Aprile",
-    "Maggio",
-    "Giugno",
-    "Luglio",
-    "Agosto",
-    "Settembre",
-    "Ottobre",
-    "Novembre",
-    "Dicembre",
-  ];
-
   return (
     <div className="card p-3 mb-5">
       <h5 className="mb-3 fw-semibold">Aggiungi Transazione</h5>
 
-      {/* Selettori Conto / Mese / Anno */}
+      {/* Selettore conto */}
       <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-3">
         <select
           className="form-select w-auto"
@@ -108,36 +92,9 @@ export default function TransactionForm({
             </option>
           ))}
         </select>
-
-        <select
-          className="form-select w-auto"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(Number(e.target.value))}
-        >
-          {months.map((m, i) => (
-            <option key={i} value={i}>
-              {m}
-            </option>
-          ))}
-        </select>
-
-        <select
-          className="form-select w-auto"
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(Number(e.target.value))}
-        >
-          {Array.from(
-            { length: 5 },
-            (_, i) => new Date().getFullYear() - i
-          ).map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
       </div>
 
-      {/* Form principale */}
+      {/* 🔹 Form inserimento */}
       <form
         onSubmit={handleSubmit}
         className="d-flex flex-wrap justify-content-center gap-3"

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { db } from "../firebaseConfig";
 import { addDoc, collection, updateDoc, doc } from "firebase/firestore";
 
@@ -7,15 +7,13 @@ export default function TransactionForm({
   accounts,
   chartAccountId,
   setChartAccountId,
-  transactions,
-  setTransactions,
   customCategories,
   selectedMonth,
   setSelectedMonth,
   selectedYear,
   setSelectedYear,
 }) {
-  const [form, setForm] = React.useState({
+  const [form, setForm] = useState({
     type: "entrata",
     categoria: "",
     importo: "",
@@ -36,11 +34,13 @@ export default function TransactionForm({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.importo || !form.data || !form.categoria || !chartAccountId)
+
+    const contoId = form.conto || chartAccountId;
+    if (!form.importo || !form.data || !form.categoria || !contoId)
       return alert("Compila tutti i campi!");
 
     const importoNum = Number(form.importo);
-    const selectedAccount = accounts.find((a) => a.id === chartAccountId);
+    const selectedAccount = accounts.find((a) => a.id === contoId);
     if (!selectedAccount) return alert("Conto non valido");
 
     let nuovoSaldo = selectedAccount.saldoIniziale;
@@ -48,29 +48,27 @@ export default function TransactionForm({
     if (form.type === "uscita" || form.type === "risparmio")
       nuovoSaldo -= importoNum;
 
+    // Aggiorna saldo conto
     await updateDoc(doc(db, "accounts", selectedAccount.id), {
       saldoIniziale: nuovoSaldo,
     });
 
-    setTransactions((prev) => [
-      ...prev,
-      { ...form, conto: chartAccountId, importo: importoNum, uid: user?.uid },
-    ]);
-
+    // Salva transazione su Firestore
     await addDoc(collection(db, "transactions"), {
       ...form,
-      conto: chartAccountId,
+      conto: contoId,
       importo: importoNum,
       uid: user?.uid,
       createdAt: new Date(),
     });
 
+    // Reset campi
     setForm({
       type: "entrata",
       categoria: "",
       importo: "",
       data: "",
-      conto: chartAccountId,
+      conto: contoId,
     });
   };
 
@@ -91,30 +89,58 @@ export default function TransactionForm({
 
   return (
     <div className="card p-3 mb-5">
-      <h5 className="mb-3 fw-semibold">Aggiungi transazione</h5>
+      <h5 className="mb-3 fw-semibold">Aggiungi Transazione</h5>
 
-      {/* Conto */}
+      {/* Selettori Conto / Mese / Anno */}
       <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-3">
         <select
           className="form-select w-auto"
-          value={chartAccountId}
+          value={form.conto || chartAccountId}
           onChange={(e) => {
             setChartAccountId(e.target.value);
             setForm((f) => ({ ...f, conto: e.target.value }));
           }}
         >
+          <option value="">Seleziona conto...</option>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
               {a.nome}
             </option>
           ))}
         </select>
+
+        <select
+          className="form-select w-auto"
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(Number(e.target.value))}
+        >
+          {months.map((m, i) => (
+            <option key={i} value={i}>
+              {m}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="form-select w-auto"
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(Number(e.target.value))}
+        >
+          {Array.from(
+            { length: 5 },
+            (_, i) => new Date().getFullYear() - i
+          ).map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Form inserimento */}
+      {/* Form principale */}
       <form
         onSubmit={handleSubmit}
-        className="d-flex flex-wrap justify-content-center gap-3 mb-4"
+        className="d-flex flex-wrap justify-content-center gap-3"
       >
         <select
           name="type"
@@ -133,7 +159,7 @@ export default function TransactionForm({
           value={form.categoria}
           onChange={(e) => setForm({ ...form, categoria: e.target.value })}
         >
-          <option value="">Seleziona categoria...</option>
+          <option value="">Categoria...</option>
           {categorie.map((c, i) => (
             <option key={i} value={c}>
               {c}

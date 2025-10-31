@@ -7,11 +7,12 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { handleGeneratePDF } from "../utils/pdfUtils";
 
 const COLORS = [
-  "#4CAF50", // entrate
-  "#2196F3", // risparmi
-  "#FF9800", // uscite
+  "#4CAF50",
+  "#2196F3",
+  "#FF9800",
   "#9C27B0",
   "#E91E63",
   "#00BCD4",
@@ -22,16 +23,16 @@ const COLORS = [
 ];
 
 export default function PieChartFinance({
-  transactions,
+  transactions = [],
   selectedMonth,
   setSelectedMonth,
   selectedYear,
   setSelectedYear,
-  accounts,
+  accounts = [],
   selectedAccountId,
   onSelectAccount,
 }) {
-  // Filtra per mese/anno e conto
+  // --- FILTRO ---
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
       const date = new Date(t.data);
@@ -45,7 +46,7 @@ export default function PieChartFinance({
     });
   }, [transactions, selectedMonth, selectedYear, selectedAccountId]);
 
-  // Raggruppa per categoria
+  // --- GROUP BY CATEGORIA ---
   const groupByCategory = (list) => {
     const result = {};
     list.forEach((t) => {
@@ -55,25 +56,25 @@ export default function PieChartFinance({
     return Object.entries(result).map(([name, value]) => ({ name, value }));
   };
 
-  const entrateData = useMemo(() => {
-    return groupByCategory(
-      filteredTransactions.filter((t) => t.type === "entrata")
-    );
-  }, [filteredTransactions]);
+  const entrateData = useMemo(
+    () =>
+      groupByCategory(filteredTransactions.filter((t) => t.type === "entrata")),
+    [filteredTransactions]
+  );
+  const usciteData = useMemo(
+    () =>
+      groupByCategory(filteredTransactions.filter((t) => t.type === "uscita")),
+    [filteredTransactions]
+  );
+  const risparmiData = useMemo(
+    () =>
+      groupByCategory(
+        filteredTransactions.filter((t) => t.type === "risparmio")
+      ),
+    [filteredTransactions]
+  );
 
-  const usciteData = useMemo(() => {
-    return groupByCategory(
-      filteredTransactions.filter((t) => t.type === "uscita")
-    );
-  }, [filteredTransactions]);
-
-  const risparmiData = useMemo(() => {
-    return groupByCategory(
-      filteredTransactions.filter((t) => t.type === "risparmio")
-    );
-  }, [filteredTransactions]);
-
-  // Calcola totali aggregati
+  // --- TOTALI E TOTALE DATA (⚠️ DEFINITO PRIMA DEL RETURN) ---
   const totaleEntrate = entrateData.reduce((sum, d) => sum + d.value, 0);
   const totaleUscite = usciteData.reduce((sum, d) => sum + d.value, 0);
   const totaleRisparmi = risparmiData.reduce((sum, d) => sum + d.value, 0);
@@ -101,23 +102,26 @@ export default function PieChartFinance({
 
   const monthLabel = new Date(selectedYear, selectedMonth).toLocaleString(
     "it-IT",
-    { month: "long", year: "numeric" }
+    {
+      month: "long",
+      year: "numeric",
+    }
   );
 
   return (
     <div className="card p-4 my-5">
       <h5 className="mb-4 text-center fw-bold">📊 Analisi Finanziaria</h5>
 
-      {/* FILTRI: CONTO + MESE/ANNO */}
+      {/* FILTRI */}
       <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-4">
         {/* Conto */}
         <select
           className="form-select w-auto"
-          value={selectedAccountId}
+          value={selectedAccountId || ""}
           onChange={(e) => onSelectAccount(e.target.value)}
         >
           {accounts.length === 0 ? (
-            <option>Nessun conto</option>
+            <option value="">Nessun conto</option>
           ) : (
             accounts.map((a) => (
               <option key={a.id} value={a.id}>
@@ -270,6 +274,7 @@ export default function PieChartFinance({
         <h4 className="text-center mb-3 fw-semibold">Totale Mensile</h4>
         {totaleData.length > 0 ? (
           <div
+            id="chart-pdf" // 🔹 questo id viene usato dal PDF
             style={{
               width: "100%",
               height: 400,
@@ -292,7 +297,7 @@ export default function PieChartFinance({
                     <Cell key={i} fill={d.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v) => `€${v.toFixed(2)}`} />
+                <Tooltip formatter={(v) => `€${Number(v).toFixed(2)}`} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -303,6 +308,20 @@ export default function PieChartFinance({
           </p>
         )}
       </div>
+
+      {/* Pulsante PDF */}
+      {totaleData.length > 0 && (
+        <div className="text-center mt-4">
+          <button
+            className="btn btn-primary px-4 py-2"
+            onClick={() =>
+              handleGeneratePDF(selectedMonth, selectedYear, "chart-pdf")
+            }
+          >
+            📄 Esporta resoconto in PDF
+          </button>
+        </div>
+      )}
     </div>
   );
 }

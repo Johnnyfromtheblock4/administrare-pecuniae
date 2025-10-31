@@ -53,11 +53,15 @@ export default function AccountManager({
     setAccounts((prev) => prev.filter((a) => a.id !== id));
   };
 
+  // 👉 Calcolo del totale dei conti
+  const totalBalance = accounts.reduce(
+    (sum, a) => sum + Number(a.saldoIniziale || 0),
+    0
+  );
+
   return (
     <div className="card p-4 mb-4 shadow-sm border-0 rounded-3">
-      <h5 className="mb-3 text-center fw-semibold">
-        💰 Gestione Conti
-      </h5>
+      <h5 className="mb-3 text-center fw-semibold">💰 Gestione Conti</h5>
 
       {/* Form */}
       <form
@@ -145,6 +149,15 @@ export default function AccountManager({
           </li>
         ))}
       </ul>
+
+      {/* Totale dei conti */}
+      {accounts.length > 0 && (
+        <div className="mt-4 text-center">
+          <h6 className="fw-bold text-dark">
+            Totale conti: €{totalBalance.toFixed(2)}
+          </h6>
+        </div>
+      )}
 
       {accounts.length === 0 && (
         <p className="text-center text-muted mt-3">

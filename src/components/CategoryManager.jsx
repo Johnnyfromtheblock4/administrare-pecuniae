@@ -45,7 +45,7 @@ export default function CategoryManager({
 
   return (
     <div className="card p-3 mb-4">
-      <h5>Categorie Personalizzate</h5>
+      <h5 className="fw-semibold">Categorie Personalizzate</h5>
       <div className="d-flex flex-wrap gap-2 align-items-center mb-3">
         <input
           type="text"
@@ -63,8 +63,8 @@ export default function CategoryManager({
           <option value="uscita">Uscita</option>
           <option value="risparmio">Risparmio</option>
         </select>
-        <button className="btn btn-outline-primary" onClick={handleAddCategory}>
-          ➕ Aggiungi
+        <button className="btn btn-primary" onClick={handleAddCategory}>
+          Aggiungi
         </button>
       </div>
 

@@ -31,7 +31,7 @@ export default function PieChartFinance({
   selectedAccountId,
   onSelectAccount,
 }) {
-  // 🎯 Filtra per mese/anno e conto
+  // Filtra per mese/anno e conto
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
       const date = new Date(t.data);
@@ -45,7 +45,7 @@ export default function PieChartFinance({
     });
   }, [transactions, selectedMonth, selectedYear, selectedAccountId]);
 
-  // 🧮 Raggruppa per categoria
+  // Raggruppa per categoria
   const groupByCategory = (list) => {
     const result = {};
     list.forEach((t) => {
@@ -73,7 +73,7 @@ export default function PieChartFinance({
     );
   }, [filteredTransactions]);
 
-  // 💰 Calcola totali aggregati
+  // Calcola totali aggregati
   const totaleEntrate = entrateData.reduce((sum, d) => sum + d.value, 0);
   const totaleUscite = usciteData.reduce((sum, d) => sum + d.value, 0);
   const totaleRisparmi = risparmiData.reduce((sum, d) => sum + d.value, 0);
@@ -108,7 +108,7 @@ export default function PieChartFinance({
     <div className="card p-4 my-5">
       <h5 className="mb-4 text-center fw-bold">📊 Analisi Finanziaria</h5>
 
-      {/* 🔽 FILTRI: CONTO + MESE/ANNO */}
+      {/* FILTRI: CONTO + MESE/ANNO */}
       <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-4">
         {/* Conto */}
         <select
@@ -166,7 +166,7 @@ export default function PieChartFinance({
           }`}
       </h6>
 
-      {/* 🎂 GRAFICI PER TIPO */}
+      {/* GRAFICI PER TIPO */}
       <div className="row">
         {/* Entrate */}
         <div className="col-lg-4 col-md-6 col-12 mb-4">
@@ -265,9 +265,9 @@ export default function PieChartFinance({
         </div>
       </div>
 
-      {/* 🔵 TORTA RIASSUNTIVA TOTALE */}
+      {/* TORTA RIASSUNTIVA TOTALE */}
       <div className="mt-5">
-        <h4 className="text-center mb-3">Totale Mensile</h4>
+        <h4 className="text-center mb-3 fw-semibold">Totale Mensile</h4>
         {totaleData.length > 0 ? (
           <div
             style={{

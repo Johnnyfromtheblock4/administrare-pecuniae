@@ -7,7 +7,7 @@ const Header = () => {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
-  // 🔐 Controllo login utente
+  // Controllo login utente
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -15,7 +15,7 @@ const Header = () => {
     return () => unsubscribe();
   }, []);
 
-  // 🔓 Logout
+  // Logout
   const handleLogout = async () => {
     await signOut(auth);
     setUser(null);
@@ -47,19 +47,9 @@ const Header = () => {
           {/* Menu */}
           <div className="collapse navbar-collapse" id="navbarNav">
             <ul className="navbar-nav ms-auto align-items-lg-center">
-              <li className="nav-item mx-2">
-                <Link className="nav-link" to="/">
-                  Home
-                </Link>
-              </li>
 
               {user ? (
                 <>
-                  <li className="nav-item mx-2">
-                    <Link className="nav-link" to="/dashboard">
-                      Dashboard
-                    </Link>
-                  </li>
                   <li className="nav-item mx-2 dropdown">
                     <button
                       className="btn btn-outline-light dropdown-toggle btn-sm"

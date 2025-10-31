@@ -43,13 +43,13 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <button type="submit" className="btn btn-success w-50">
+        <button type="submit" className="btn btn-primary w-50">
           Accedi
         </button>
       </form>
 
       <p className="mt-4 text-muted">
-        Non hai un account?{" "}
+        Non hai un account?
         <Link to="/register" className="text-decoration-none">
           Registrati qui
         </Link>
@@ -57,4 +57,3 @@ export default function Login() {
     </div>
   );
 }
-

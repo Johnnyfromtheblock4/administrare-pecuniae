@@ -91,7 +91,7 @@ export default function TransactionForm({
 
   return (
     <div className="card p-3 mb-5">
-      <h5 className="mb-3">Aggiungi transazione</h5>
+      <h5 className="mb-3 fw-semibold">Aggiungi transazione</h5>
 
       {/* Conto */}
       <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-3">
@@ -163,7 +163,7 @@ export default function TransactionForm({
           }}
         />
 
-        <button type="submit" className="btn btn-success">
+        <button type="submit" className="btn btn-primary">
           Aggiungi
         </button>
       </form>

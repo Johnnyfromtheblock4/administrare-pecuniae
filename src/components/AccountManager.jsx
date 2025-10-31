@@ -55,11 +55,11 @@ export default function AccountManager({
 
   return (
     <div className="card p-4 mb-4 shadow-sm border-0 rounded-3">
-      <h5 className="mb-3 text-center text-primary fw-semibold">
+      <h5 className="mb-3 text-center fw-semibold">
         💰 Gestione Conti
       </h5>
 
-      {/* ✅ Form responsive */}
+      {/* Form */}
       <form
         onSubmit={handleAddAccount}
         className="row g-2 align-items-center justify-content-center mb-3"
@@ -89,11 +89,11 @@ export default function AccountManager({
         </div>
 
         <div className="col-12 col-md-auto d-grid">
-          <button className="btn btn-primary w-100">➕ Aggiungi Conto</button>
+          <button className="btn btn-primary w-100">Aggiungi Conto</button>
         </div>
       </form>
 
-      {/* ✅ Lista conti responsive */}
+      {/* Lista conti */}
       <ul className="list-group mt-3">
         {accounts.map((a) => (
           <li
@@ -120,7 +120,7 @@ export default function AccountManager({
                 />
               </div>
             ) : (
-              <div className="d-flex flex-column flex-md-row justify-content-between w-100 align-items-md-center">
+              <div className="d-flex flex-column flex-md-row justify-content-between w-100 align-items-md-center mx-3">
                 <strong className="text-dark fs-6">{a.nome}</strong>
                 <span className="text-muted mt-1 mt-md-0">
                   €{a.saldoIniziale.toFixed(2)}
@@ -130,13 +130,13 @@ export default function AccountManager({
 
             <div className="d-flex gap-2 mt-2 mt-md-0 justify-content-end">
               <button
-                className="btn btn-sm btn-outline-secondary"
+                className="btn btn-sm btn-success"
                 onClick={() => setEditAccountId(a.id)}
               >
                 ✏️
               </button>
               <button
-                className="btn btn-sm btn-outline-danger"
+                className="btn btn-sm btn-danger"
                 onClick={() => handleDeleteAccount(a.id)}
               >
                 🗑️

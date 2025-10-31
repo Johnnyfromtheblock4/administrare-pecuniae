@@ -24,7 +24,7 @@ export default function FinanceDashboard() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // 🔑 1️⃣ Rileva se l'utente è loggato
+  // Rileva se l'utente è loggato
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       if (currentUser) {
@@ -36,7 +36,7 @@ export default function FinanceDashboard() {
     return () => unsubscribe();
   }, []);
 
-  // 🔥 2️⃣ Carica dati in tempo reale da Firestore
+  // Carica dati in tempo reale da Firestore
   useEffect(() => {
     if (!user) return; // Evita di caricare se non loggato
 
@@ -71,7 +71,7 @@ export default function FinanceDashboard() {
     };
   }, [user]);
 
-  // 🗑️ 3️⃣ Elimina transazione e aggiorna saldo del conto
+  // Elimina transazione e aggiorna saldo del conto
   const handleDeleteTransaction = async (t) => {
     if (!window.confirm("Vuoi davvero eliminare questa transazione?")) return;
 
@@ -106,7 +106,7 @@ export default function FinanceDashboard() {
     }
   };
 
-  // 🔐 Se non loggato, mostra avviso
+  // Se non loggato, mostra avviso
   if (!user) {
     return (
       <div className="text-center my-5">
@@ -115,7 +115,7 @@ export default function FinanceDashboard() {
     );
   }
 
-  // ✅ 4️⃣ Mostra dashboard se loggato
+  // Mostra dashboard se loggato
   return (
     <div className="container my-5">
       <h2 className="text-center mb-4">

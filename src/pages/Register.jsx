@@ -1,18 +1,25 @@
 import React, { useState } from "react";
-import { auth, db } from "../firebaseConfig"; // ✅ importa sia auth che db
+import { auth, db } from "../firebaseConfig";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore"; // ✅ importa le funzioni Firestore
+import { doc, setDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
 export default function Register() {
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
+
+    if (!username.trim()) {
+      alert("Inserisci un nome utente valido.");
+      return;
+    }
+
     try {
-      // 🔐 Crea l'utente
+      // Crea l'utente su Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -20,8 +27,9 @@ export default function Register() {
       );
       const user = userCredential.user;
 
-      // 💾 Salva dati utente in Firestore
+      // Salva i dati utente su Firestore
       await setDoc(doc(db, "users", user.uid), {
+        username: username.trim(),
         email: user.email,
         createdAt: new Date(),
       });
@@ -48,6 +56,16 @@ export default function Register() {
         onSubmit={handleRegister}
         className="d-flex flex-column align-items-center gap-3 mt-4"
       >
+        {/* Campo Username */}
+        <input
+          type="text"
+          className="form-control w-50"
+          placeholder="Nome utente"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          required
+        />
+
         <input
           type="email"
           className="form-control w-50"

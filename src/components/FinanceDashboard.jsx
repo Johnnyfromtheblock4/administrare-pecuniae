@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { db, auth } from "../firebaseConfig";
+import { auth, db } from "../firebaseConfig";
 import {
   collection,
   onSnapshot,
   deleteDoc,
   doc,
   updateDoc,
+  getDoc,
 } from "firebase/firestore";
 
 import AccountManager from "./AccountManager";
@@ -17,6 +18,7 @@ import PieChartFinance from "./PieChartFinance";
 
 export default function FinanceDashboard() {
   const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [customCategories, setCustomCategories] = useState([]);
@@ -24,15 +26,28 @@ export default function FinanceDashboard() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // Popup stati
   const [alertMessage, setAlertMessage] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  // Rileva se l'utente è loggato
+  // Rileva se l'utente è loggato e carica i suoi dati da Firestore
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser || null);
+
+      if (currentUser) {
+        try {
+          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          if (userDoc.exists()) {
+            setUserData(userDoc.data());
+          }
+        } catch (error) {
+          console.error("Errore nel recupero dati utente:", error);
+        }
+      } else {
+        setUserData(null);
+      }
     });
+
     return () => unsubscribe();
   }, []);
 
@@ -71,12 +86,12 @@ export default function FinanceDashboard() {
     };
   }, [user]);
 
-  // Avvia eliminazione (mostra popup)
+  // Mostra popup di conferma eliminazione
   const handleDeleteTransaction = (t) => {
     setConfirmDelete(t);
   };
 
-  // Conferma eliminazione
+  // Conferma eliminazione e aggiorna saldo conto
   const confirmDeleteTransaction = async () => {
     if (!confirmDelete) return;
 
@@ -107,9 +122,9 @@ export default function FinanceDashboard() {
       }
 
       setTransactions((prev) => prev.filter((x) => x.id !== confirmDelete.id));
-      setAlertMessage("Transazione eliminata con successo.");
+      setAlertMessage("Transazione eliminata e saldo aggiornato.");
     } catch (err) {
-      console.error("Errore eliminazione:", err);
+      console.error("Errore durante l'eliminazione:", err);
       setAlertMessage("Errore durante l'eliminazione. Riprova.");
     } finally {
       setConfirmDelete(null);
@@ -120,7 +135,7 @@ export default function FinanceDashboard() {
   if (!user) {
     return (
       <div className="text-center my-5">
-        <h4>🔒 Effettua il login per accedere alla tua area finanziaria</h4>
+        <h4>Effettua il login per accedere alla tua area finanziaria</h4>
       </div>
     );
   }
@@ -128,10 +143,11 @@ export default function FinanceDashboard() {
   return (
     <div className="container my-5">
       <h2 className="text-center mb-4">
-        Benvenuto, <span className="text-primary">{user.email}</span>
+        Benvenuto,{" "}
+        <span className="text-primary">{userData?.username || user.email}</span>
       </h2>
 
-      {/* COMPONENTI PRINCIPALI */}
+      {/* Gestione conti */}
       <AccountManager
         user={user}
         accounts={accounts}
@@ -140,12 +156,14 @@ export default function FinanceDashboard() {
         setChartAccountId={setChartAccountId}
       />
 
+      {/* Gestione categorie */}
       <CategoryManager
         user={user}
         customCategories={customCategories}
         setCustomCategories={setCustomCategories}
       />
 
+      {/* Form transazioni */}
       <TransactionForm
         user={user}
         accounts={accounts}
@@ -160,12 +178,14 @@ export default function FinanceDashboard() {
         setSelectedYear={setSelectedYear}
       />
 
+      {/* Tabella transazioni */}
       <TransactionTable
         transactions={transactions}
         accounts={accounts}
         onDelete={handleDeleteTransaction}
       />
 
+      {/* Grafico analisi finanziaria */}
       <PieChartFinance
         transactions={transactions}
         accounts={accounts}
@@ -178,7 +198,7 @@ export default function FinanceDashboard() {
         setTransactions={setTransactions}
       />
 
-      {/* POPUP ALERT */}
+      {/* Popup alert generico */}
       {alertMessage && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
@@ -205,7 +225,7 @@ export default function FinanceDashboard() {
         </div>
       )}
 
-      {/* POPUP CONFERMA ELIMINAZIONE */}
+      {/* Popup conferma eliminazione */}
       {confirmDelete && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"

@@ -18,6 +18,7 @@ export default function TransactionForm({
     importo: "",
     data: "",
     conto: chartAccountId || "",
+    descrizione: "", // 🆕 campo facoltativo
   });
 
   const [alertMessage, setAlertMessage] = useState("");
@@ -38,7 +39,7 @@ export default function TransactionForm({
 
     const contoId = form.conto || chartAccountId;
     if (!form.importo || !form.data || !form.categoria || !contoId)
-      return setAlertMessage("Compila tutti i campi!");
+      return setAlertMessage("Compila tutti i campi obbligatori!");
 
     const importoNum = Number(form.importo);
     const selectedAccount = accounts.find((a) => a.id === contoId);
@@ -49,35 +50,41 @@ export default function TransactionForm({
     if (form.type === "uscita" || form.type === "risparmio")
       nuovoSaldo -= importoNum;
 
-    // 🔄 Aggiorna saldo conto
-    await updateDoc(doc(db, "accounts", selectedAccount.id), {
-      saldoIniziale: nuovoSaldo,
-    });
+    try {
+      // 🔄 Aggiorna saldo conto
+      await updateDoc(doc(db, "accounts", selectedAccount.id), {
+        saldoIniziale: nuovoSaldo,
+      });
 
-    // Salva transazione su Firestore
-    await addDoc(collection(db, "transactions"), {
-      ...form,
-      conto: contoId,
-      importo: importoNum,
-      uid: user?.uid,
-      createdAt: new Date(),
-    });
+      // 💾 Salva transazione su Firestore
+      await addDoc(collection(db, "transactions"), {
+        ...form,
+        conto: contoId,
+        importo: importoNum,
+        uid: user?.uid,
+        createdAt: new Date(),
+      });
 
-    // Reset form
-    setForm({
-      type: "entrata",
-      categoria: "",
-      importo: "",
-      data: "",
-      conto: contoId,
-    });
+      // 🧹 Reset form
+      setForm({
+        type: "entrata",
+        categoria: "",
+        importo: "",
+        data: "",
+        conto: contoId,
+        descrizione: "",
+      });
+    } catch (error) {
+      console.error("Errore aggiunta transazione:", error);
+      setAlertMessage("Errore durante il salvataggio della transazione.");
+    }
   };
 
   return (
     <div className="card p-3 mb-5">
       <h4 className="mb-3 fw-semibold">Aggiungi Transazione</h4>
 
-      {/* Selettore conto */}
+      {/* 🔹 Selettore conto */}
       <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-3">
         <select
           className="form-select w-auto"
@@ -96,7 +103,7 @@ export default function TransactionForm({
         </select>
       </div>
 
-      {/* 🔹 Form inserimento */}
+      {/* 🔸 FORM */}
       <form
         onSubmit={handleSubmit}
         className="d-flex flex-wrap justify-content-center gap-3"
@@ -148,12 +155,22 @@ export default function TransactionForm({
           }}
         />
 
-        <button type="submit" className="btn btn-primary">
+        {/* 🆕 Campo descrizione (facoltativo) */}
+        <input
+          type="text"
+          name="descrizione"
+          className="form-control w-100 mt-3"
+          placeholder="Descrizione (facoltativa)"
+          value={form.descrizione}
+          onChange={(e) => setForm({ ...form, descrizione: e.target.value })}
+        />
+
+        <button type="submit" className="btn btn-primary mt-3">
           Aggiungi
         </button>
       </form>
 
-      {/* 🔸 ALERT POPUP */}
+      {/* 🔸 POPUP ALERT */}
       {alertMessage && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"

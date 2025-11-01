@@ -148,11 +148,14 @@ export default function PieChartFinance({
         {/* Conto */}
         <select
           className="form-select w-auto"
-          value={selectedAccountId || ""}
-          onChange={(e) => onSelectAccount(e.target.value)}
+          value={selectedAccountId || "global"}
+          onChange={(e) =>
+            onSelectAccount(e.target.value === "global" ? "" : e.target.value)
+          }
         >
+          <option value="global">Globale (tutti i conti)</option>
           {accounts.length === 0 ? (
-            <option value="">Nessun conto</option>
+            <option disabled>Nessun conto disponibile</option>
           ) : (
             accounts.map((a) => (
               <option key={a.id} value={a.id}>
@@ -193,12 +196,11 @@ export default function PieChartFinance({
       </div>
 
       <h6 className="text-center mb-3">
-        Bilancio di {monthLabel}
-        {selectedAccountId &&
-          ` • ${
-            accounts.find((a) => a.id === selectedAccountId)?.nome ||
+        Bilancio di {monthLabel} •{" "}
+        {selectedAccountId
+          ? accounts.find((a) => a.id === selectedAccountId)?.nome ||
             "Conto selezionato"
-          }`}
+          : "Tutti i conti"}
       </h6>
 
       {/* ELENCO TRANSAZIONI */}

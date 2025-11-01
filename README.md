@@ -5,4 +5,3 @@ Webapp per gestire finanze
 
 COSE DA IMPLEMENTARE 
 -stile
--descrizione transazione

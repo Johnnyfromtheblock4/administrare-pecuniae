@@ -35,10 +35,14 @@ export default function TransactionTable({ transactions, onDelete, accounts }) {
   }, [transactions, selectedMonth, selectedYear]);
 
   if (transactions.length === 0)
-    return <p className="text-center">Nessuna transazione inserita.</p>;
+    return (
+      <div className="card p-4 mb-5">
+        <p className="text-center m-0">Nessuna transazione inserita.</p>
+      </div>
+    );
 
   return (
-    <>
+    <div className="card p-4 mb-5">
       <h4 className="mb-3 fw-semibold text-center">📑 Storico transazioni</h4>
 
       {/* 🔽 MENU FILTRI PER MESE E ANNO */}
@@ -72,7 +76,7 @@ export default function TransactionTable({ transactions, onDelete, accounts }) {
 
       {/* 🔹 Tabella transazioni filtrate */}
       {filteredTransactions.length === 0 ? (
-        <p className="text-center text-muted">
+        <p className="text-center text-muted m-0">
           Nessuna transazione per {months[selectedMonth]} {selectedYear}.
         </p>
       ) : (
@@ -120,6 +124,6 @@ export default function TransactionTable({ transactions, onDelete, accounts }) {
           </table>
         </div>
       )}
-    </>
+    </div>
   );
 }

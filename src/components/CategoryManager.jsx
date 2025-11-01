@@ -47,7 +47,7 @@ export default function CategoryManager({
 
   return (
     <div className="card p-3 mb-4">
-      <h5 className="fw-semibold mb-3">Categorie Personalizzate</h5>
+      <h4 className="fw-semibold mb-3">Categorie Personalizzate</h4>
 
       {/* Form responsive */}
       <div className="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2 mb-3">

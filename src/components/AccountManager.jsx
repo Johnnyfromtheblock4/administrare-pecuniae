@@ -17,12 +17,14 @@ export default function AccountManager({
 }) {
   const [newAccount, setNewAccount] = useState({ nome: "", saldoIniziale: "" });
   const [editAccountId, setEditAccountId] = useState(null);
+  const [alertMessage, setAlertMessage] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null); // id conto da eliminare
 
   const handleAddAccount = async (e) => {
     e.preventDefault();
     if (!newAccount.nome || !newAccount.saldoIniziale)
-      return alert("Compila tutti i campi!");
-    if (!user) return alert("Devi essere loggato!");
+      return setAlertMessage("Compila tutti i campi!");
+    if (!user) return setAlertMessage("Devi essere loggato!");
 
     const docRef = await addDoc(collection(db, "accounts"), {
       nome: newAccount.nome,
@@ -48,12 +50,16 @@ export default function AccountManager({
   };
 
   const handleDeleteAccount = async (id) => {
-    if (!window.confirm("Vuoi davvero eliminare questo conto?")) return;
-    await deleteDoc(doc(db, "accounts", id));
-    setAccounts((prev) => prev.filter((a) => a.id !== id));
+    setConfirmDelete(id); // apre la modale di conferma
   };
 
-  // 👉 Calcolo del totale dei conti
+  const confirmDeleteAccount = async () => {
+    await deleteDoc(doc(db, "accounts", confirmDelete));
+    setAccounts((prev) => prev.filter((a) => a.id !== confirmDelete));
+    setConfirmDelete(null);
+  };
+
+  // Calcolo del totale dei conti
   const totalBalance = accounts.reduce(
     (sum, a) => sum + Number(a.saldoIniziale || 0),
     0
@@ -61,7 +67,7 @@ export default function AccountManager({
 
   return (
     <div className="card p-4 mb-4 shadow-sm border-0 rounded-3">
-      <h5 className="mb-3 text-center fw-semibold">💰 Gestione Conti</h5>
+      <h4 className="mb-3 text-center fw-semibold">💰 Gestione Conti</h4>
 
       {/* Form */}
       <form
@@ -105,47 +111,80 @@ export default function AccountManager({
             className="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center py-3"
           >
             {editAccountId === a.id ? (
-              <div className="d-flex flex-column flex-md-row gap-2 w-100">
-                <input
-                  type="text"
-                  className="form-control"
-                  defaultValue={a.nome}
-                  onBlur={(e) =>
-                    handleEditAccount(a.id, e.target.value, a.saldoIniziale)
-                  }
-                />
-                <input
-                  type="number"
-                  className="form-control"
-                  defaultValue={a.saldoIniziale}
-                  onBlur={(e) =>
-                    handleEditAccount(a.id, a.nome, e.target.value)
-                  }
-                />
-              </div>
-            ) : (
-              <div className="d-flex flex-column flex-md-row justify-content-between w-100 align-items-md-center mx-3">
-                <strong className="text-dark fs-6">{a.nome}</strong>
-                <span className="text-muted mt-1 mt-md-0">
-                  €{a.saldoIniziale.toFixed(2)}
-                </span>
-              </div>
-            )}
+              <>
+                <div className="d-flex flex-column flex-md-row gap-2 w-100">
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={a.nome}
+                    onChange={(e) =>
+                      setAccounts((prev) =>
+                        prev.map((acc) =>
+                          acc.id === a.id
+                            ? { ...acc, nome: e.target.value }
+                            : acc
+                        )
+                      )
+                    }
+                  />
+                  <input
+                    type="number"
+                    className="form-control"
+                    value={a.saldoIniziale}
+                    onChange={(e) =>
+                      setAccounts((prev) =>
+                        prev.map((acc) =>
+                          acc.id === a.id
+                            ? { ...acc, saldoIniziale: e.target.value }
+                            : acc
+                        )
+                      )
+                    }
+                  />
+                </div>
 
-            <div className="d-flex gap-2 mt-2 mt-md-0 justify-content-end">
-              <button
-                className="btn btn-sm btn-success"
-                onClick={() => setEditAccountId(a.id)}
-              >
-                ✏️
-              </button>
-              <button
-                className="btn btn-sm btn-danger"
-                onClick={() => handleDeleteAccount(a.id)}
-              >
-                🗑️
-              </button>
-            </div>
+                <div className="d-flex gap-2 mt-2 mt-md-0 justify-content-end">
+                  <button
+                    className="btn btn-sm btn-success"
+                    onClick={() =>
+                      handleEditAccount(a.id, a.nome, a.saldoIniziale)
+                    }
+                  >
+                    ✅
+                  </button>
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => setEditAccountId(null)}
+                  >
+                    ❌
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="d-flex flex-column flex-md-row justify-content-between w-100 align-items-md-center mx-3">
+                  <strong className="text-dark fs-6">{a.nome}</strong>
+                  <span className="text-muted mt-1 mt-md-0">
+                    €{a.saldoIniziale.toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="d-flex gap-2 mt-2 mt-md-0 justify-content-end">
+                  <button
+                    className="btn btn-sm btn-success"
+                    onClick={() => setEditAccountId(a.id)}
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    className="btn btn-sm btn-danger"
+                    onClick={() => handleDeleteAccount(a.id)}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </>
+            )}
           </li>
         ))}
       </ul>
@@ -153,9 +192,9 @@ export default function AccountManager({
       {/* Totale dei conti */}
       {accounts.length > 0 && (
         <div className="mt-4 text-center">
-          <h6 className="fw-bold text-dark">
+          <h4 className="fw-bold text-dark">
             Totale conti: €{totalBalance.toFixed(2)}
-          </h6>
+          </h4>
         </div>
       )}
 
@@ -163,6 +202,65 @@ export default function AccountManager({
         <p className="text-center text-muted mt-3">
           Nessun conto presente. Aggiungine uno sopra 👆
         </p>
+      )}
+
+      {/* ALERT POPUP */}
+      {alertMessage && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1050 }}
+        >
+          <div
+            className="p-4 rounded shadow text-center"
+            style={{
+              backgroundColor: "#f7efde",
+              color: "black",
+              width: "90%",
+              maxWidth: "400px",
+            }}
+          >
+            <h6 className="mb-3 fw-semibold">Avviso</h6>
+            <p>{alertMessage}</p>
+            <button
+              className="btn btn-primary mt-2"
+              onClick={() => setAlertMessage("")}
+            >
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION POPUP */}
+      {confirmDelete && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1050 }}
+        >
+          <div
+            className="p-4 rounded shadow text-center"
+            style={{
+              backgroundColor: "#f7efde",
+              color: "black",
+              width: "90%",
+              maxWidth: "400px",
+            }}
+          >
+            <h6 className="mb-3 fw-semibold">Conferma eliminazione</h6>
+            <p>Vuoi davvero eliminare questo conto?</p>
+            <div className="d-flex justify-content-center gap-3 mt-3">
+              <button
+                className="btn btn-warning"
+                onClick={() => setConfirmDelete(null)}
+              >
+                Annulla
+              </button>
+              <button className="btn btn-danger" onClick={confirmDeleteAccount}>
+                Elimina
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

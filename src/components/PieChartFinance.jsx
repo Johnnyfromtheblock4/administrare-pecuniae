@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   PieChart,
   Pie,
@@ -7,6 +7,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { db } from "../firebaseConfig";
+import { deleteDoc, doc } from "firebase/firestore";
 import { handleGeneratePDF } from "../utils/pdfUtils";
 
 const COLORS = [
@@ -24,6 +26,7 @@ const COLORS = [
 
 export default function PieChartFinance({
   transactions = [],
+  setTransactions,
   selectedMonth,
   setSelectedMonth,
   selectedYear,
@@ -32,6 +35,26 @@ export default function PieChartFinance({
   selectedAccountId,
   onSelectAccount,
 }) {
+  const [alertMessage, setAlertMessage] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  // --- ELIMINAZIONE TRANSAZIONE ---
+  const handleDeleteTransaction = (id) => {
+    setConfirmDeleteId(id);
+  };
+
+  const confirmDeleteTransaction = async () => {
+    try {
+      await deleteDoc(doc(db, "transactions", confirmDeleteId));
+      setTransactions((prev) => prev.filter((t) => t.id !== confirmDeleteId));
+      setConfirmDeleteId(null);
+      setAlertMessage("Transazione eliminata con successo.");
+    } catch (error) {
+      console.error(error);
+      setAlertMessage("Errore durante l’eliminazione della transazione.");
+    }
+  };
+
   // --- FILTRO ---
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
@@ -74,7 +97,7 @@ export default function PieChartFinance({
     [filteredTransactions]
   );
 
-  // --- TOTALI E TOTALE DATA (⚠️ DEFINITO PRIMA DEL RETURN) ---
+  // --- TOTALI ---
   const totaleEntrate = entrateData.reduce((sum, d) => sum + d.value, 0);
   const totaleUscite = usciteData.reduce((sum, d) => sum + d.value, 0);
   const totaleRisparmi = risparmiData.reduce((sum, d) => sum + d.value, 0);
@@ -102,15 +125,23 @@ export default function PieChartFinance({
 
   const monthLabel = new Date(selectedYear, selectedMonth).toLocaleString(
     "it-IT",
-    {
-      month: "long",
-      year: "numeric",
-    }
+    { month: "long", year: "numeric" }
   );
+
+  const handlePDFExport = async () => {
+    try {
+      if (totaleData.length === 0)
+        return setAlertMessage("Nessun dato disponibile per questo mese.");
+      await handleGeneratePDF(selectedMonth, selectedYear, "chart-pdf");
+    } catch (error) {
+      console.error(error);
+      setAlertMessage("Errore durante l’esportazione del PDF.");
+    }
+  };
 
   return (
     <div className="card p-4 my-5">
-      <h5 className="mb-4 text-center fw-bold">📊 Analisi Finanziaria</h5>
+      <h4 className="mb-4 text-center fw-bold">📊 Analisi Finanziaria</h4>
 
       {/* FILTRI */}
       <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-4">
@@ -170,111 +201,78 @@ export default function PieChartFinance({
           }`}
       </h6>
 
+      {/* ELENCO TRANSAZIONI */}
+      {filteredTransactions.length > 0 && (
+        <ul className="list-group mb-4">
+          {filteredTransactions.map((t) => (
+            <li
+              key={t.id}
+              className="list-group-item d-flex justify-content-between align-items-center"
+            >
+              <div>
+                <strong>{t.categoria}</strong> — €{t.importo.toFixed(2)}
+                <br />
+                <small className="text-muted">
+                  {new Date(t.data).toLocaleDateString("it-IT")}
+                </small>
+              </div>
+              <button
+                className="btn btn-sm btn-danger"
+                onClick={() => handleDeleteTransaction(t.id)}
+              >
+                🗑️
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {/* GRAFICI PER TIPO */}
       <div className="row">
-        {/* Entrate */}
-        <div className="col-lg-4 col-md-6 col-12 mb-4">
-          <h5 className="text-center text-success">Entrate</h5>
-          {entrateData.length > 0 ? (
-            <div style={{ width: "100%", height: 350 }}>
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={entrateData}
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={120}
-                    cx="50%"
-                    cy="50%"
-                    label
-                  >
-                    {entrateData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <p className="text-center text-muted">
-              Nessuna entrata per questo mese.
-            </p>
-          )}
-        </div>
-
-        {/* Uscite */}
-        <div className="col-lg-4 col-md-6 col-12 mb-4">
-          <h5 className="text-center text-danger">Uscite</h5>
-          {usciteData.length > 0 ? (
-            <div style={{ width: "100%", height: 350 }}>
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={usciteData}
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={120}
-                    cx="50%"
-                    cy="50%"
-                    label
-                  >
-                    {usciteData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <p className="text-center text-muted">
-              Nessuna uscita per questo mese.
-            </p>
-          )}
-        </div>
-
-        {/* Risparmi */}
-        <div className="col-lg-4 col-md-6 col-12 mb-4">
-          <h5 className="text-center text-primary">Risparmi</h5>
-          {risparmiData.length > 0 ? (
-            <div style={{ width: "100%", height: 350 }}>
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie
-                    data={risparmiData}
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={120}
-                    cx="50%"
-                    cy="50%"
-                    label
-                  >
-                    {risparmiData.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <p className="text-center text-muted">
-              Nessun risparmio per questo mese.
-            </p>
-          )}
-        </div>
+        {[
+          { title: "Entrate", color: "text-success", data: entrateData },
+          { title: "Uscite", color: "text-danger", data: usciteData },
+          { title: "Risparmi", color: "text-primary", data: risparmiData },
+        ].map(({ title, color, data }, i) => (
+          <div key={i} className="col-lg-4 col-md-6 col-12 mb-4">
+            <h5 className={`text-center ${color}`}>{title}</h5>
+            {data.length > 0 ? (
+              <div style={{ width: "100%", height: 350 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Pie
+                      data={data}
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={120}
+                      cx="50%"
+                      cy="50%"
+                      label
+                    >
+                      {data.map((_, j) => (
+                        <Cell key={j} fill={COLORS[j % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="text-center text-muted">
+                Nessuna {title.toLowerCase()} per questo mese.
+              </p>
+            )}
+          </div>
+        ))}
       </div>
 
-      {/* TORTA RIASSUNTIVA TOTALE */}
+      {/* TORTA RIASSUNTIVA */}
       <div className="mt-5">
         <h4 className="text-center mb-3 fw-semibold">Totale Mensile</h4>
         {totaleData.length > 0 ? (
           <div
-            id="chart-pdf" // 🔹 questo id viene usato dal PDF
+            id="chart-pdf"
             style={{
               width: "100%",
               height: 400,
@@ -314,12 +312,72 @@ export default function PieChartFinance({
         <div className="text-center mt-4">
           <button
             className="btn btn-primary px-4 py-2"
-            onClick={() =>
-              handleGeneratePDF(selectedMonth, selectedYear, "chart-pdf")
-            }
+            onClick={handlePDFExport}
           >
             📄 Esporta resoconto in PDF
           </button>
+        </div>
+      )}
+
+      {/* 🔸 POPUP ALERT */}
+      {alertMessage && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1051 }}
+        >
+          <div
+            className="p-4 rounded shadow text-center"
+            style={{
+              backgroundColor: "#f7efde",
+              color: "black",
+              width: "90%",
+              maxWidth: "400px",
+            }}
+          >
+            <h6 className="mb-3 fw-semibold">Avviso</h6>
+            <p>{alertMessage}</p>
+            <button
+              className="btn btn-primary mt-2"
+              onClick={() => setAlertMessage("")}
+            >
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🔹 POPUP CONFERMA ELIMINAZIONE */}
+      {confirmDeleteId && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1050 }}
+        >
+          <div
+            className="p-4 rounded shadow text-center"
+            style={{
+              backgroundColor: "#f7efde",
+              color: "black",
+              width: "90%",
+              maxWidth: "400px",
+            }}
+          >
+            <h6 className="mb-3 fw-semibold">Conferma eliminazione</h6>
+            <p>Vuoi davvero eliminare questa transazione?</p>
+            <div className="d-flex justify-content-center gap-3 mt-3">
+              <button
+                className="btn btn-secondary"
+                onClick={() => setConfirmDeleteId(null)}
+              >
+                Annulla
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={confirmDeleteTransaction}
+              >
+                Elimina
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

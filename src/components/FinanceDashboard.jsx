@@ -24,21 +24,21 @@ export default function FinanceDashboard() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-  // Rileva se l'utente è loggato
+  // Popup stati
+  const [alertMessage, setAlertMessage] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  // 🔹 Rileva se l'utente è loggato
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-      } else {
-        setUser(null);
-      }
+      setUser(currentUser || null);
     });
     return () => unsubscribe();
   }, []);
 
-  // Carica dati in tempo reale da Firestore
+  // 🔹 Carica dati in tempo reale da Firestore
   useEffect(() => {
-    if (!user) return; // Evita di caricare se non loggato
+    if (!user) return;
 
     const unsubAccounts = onSnapshot(collection(db, "accounts"), (snap) => {
       const data = snap.docs
@@ -71,20 +71,28 @@ export default function FinanceDashboard() {
     };
   }, [user]);
 
-  // Elimina transazione e aggiorna saldo del conto
-  const handleDeleteTransaction = async (t) => {
-    if (!window.confirm("Vuoi davvero eliminare questa transazione?")) return;
+  // 🔹 Avvia eliminazione (mostra popup)
+  const handleDeleteTransaction = (t) => {
+    setConfirmDelete(t);
+  };
+
+  // 🔹 Conferma eliminazione
+  const confirmDeleteTransaction = async () => {
+    if (!confirmDelete) return;
 
     try {
-      await deleteDoc(doc(db, "transactions", t.id));
+      await deleteDoc(doc(db, "transactions", confirmDelete.id));
 
-      const account = accounts.find((a) => a.id === t.conto);
+      const account = accounts.find((a) => a.id === confirmDelete.conto);
       if (account) {
         let nuovoSaldo = Number(account.saldoIniziale);
-        const importo = Number(t.importo);
+        const importo = Number(confirmDelete.importo);
 
-        if (t.type === "entrata") nuovoSaldo -= importo;
-        if (t.type === "uscita" || t.type === "risparmio")
+        if (confirmDelete.type === "entrata") nuovoSaldo -= importo;
+        if (
+          confirmDelete.type === "uscita" ||
+          confirmDelete.type === "risparmio"
+        )
           nuovoSaldo += importo;
 
         await updateDoc(doc(db, "accounts", account.id), {
@@ -98,15 +106,17 @@ export default function FinanceDashboard() {
         );
       }
 
-      setTransactions((prev) => prev.filter((x) => x.id !== t.id));
-      alert("Transazione eliminata con successo.");
+      setTransactions((prev) => prev.filter((x) => x.id !== confirmDelete.id));
+      setAlertMessage("Transazione eliminata con successo.");
     } catch (err) {
       console.error("Errore eliminazione:", err);
-      alert("Errore durante l'eliminazione. Riprova.");
+      setAlertMessage("Errore durante l'eliminazione. Riprova.");
+    } finally {
+      setConfirmDelete(null);
     }
   };
 
-  // Se non loggato, mostra avviso
+  // 🔹 Se non loggato
   if (!user) {
     return (
       <div className="text-center my-5">
@@ -115,13 +125,13 @@ export default function FinanceDashboard() {
     );
   }
 
-  // Mostra dashboard se loggato
   return (
     <div className="container my-5">
       <h2 className="text-center mb-4">
         Benvenuto, <span className="text-primary">{user.email}</span>
       </h2>
 
+      {/* COMPONENTI PRINCIPALI */}
       <AccountManager
         user={user}
         accounts={accounts}
@@ -165,7 +175,74 @@ export default function FinanceDashboard() {
         setSelectedMonth={setSelectedMonth}
         selectedYear={selectedYear}
         setSelectedYear={setSelectedYear}
+        setTransactions={setTransactions}
       />
+
+      {/* 🔸 POPUP ALERT */}
+      {alertMessage && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1051 }}
+        >
+          <div
+            className="p-4 rounded shadow text-center"
+            style={{
+              backgroundColor: "#f7efde",
+              color: "black",
+              width: "90%",
+              maxWidth: "400px",
+            }}
+          >
+            <h6 className="mb-3 fw-semibold">Avviso</h6>
+            <p>{alertMessage}</p>
+            <button
+              className="btn btn-primary mt-2"
+              onClick={() => setAlertMessage("")}
+            >
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🔹 POPUP CONFERMA ELIMINAZIONE */}
+      {confirmDelete && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1050 }}
+        >
+          <div
+            className="p-4 rounded shadow text-center"
+            style={{
+              backgroundColor: "#f7efde",
+              color: "black",
+              width: "90%",
+              maxWidth: "400px",
+            }}
+          >
+            <h6 className="mb-3 fw-semibold">Conferma eliminazione</h6>
+            <p>
+              Vuoi davvero eliminare la transazione{" "}
+              <strong>{confirmDelete.categoria}</strong> da{" "}
+              <strong>€{confirmDelete.importo}</strong>?
+            </p>
+            <div className="d-flex justify-content-center gap-3 mt-3">
+              <button
+                className="btn btn-warning"
+                onClick={() => setConfirmDelete(null)}
+              >
+                Annulla
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={confirmDeleteTransaction}
+              >
+                Elimina
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

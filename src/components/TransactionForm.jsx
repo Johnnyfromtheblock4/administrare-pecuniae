@@ -20,6 +20,8 @@ export default function TransactionForm({
     conto: chartAccountId || "",
   });
 
+  const [alertMessage, setAlertMessage] = useState("");
+
   const categorieBase = {
     entrata: ["Stipendio", "Pensione", "Investimenti", "Crediti", "Altro"],
     uscita: ["Spesa", "Affitto", "Bollette", "Shopping", "Altro"],
@@ -36,11 +38,11 @@ export default function TransactionForm({
 
     const contoId = form.conto || chartAccountId;
     if (!form.importo || !form.data || !form.categoria || !contoId)
-      return alert("Compila tutti i campi!");
+      return setAlertMessage("Compila tutti i campi!");
 
     const importoNum = Number(form.importo);
     const selectedAccount = accounts.find((a) => a.id === contoId);
-    if (!selectedAccount) return alert("Conto non valido");
+    if (!selectedAccount) return setAlertMessage("Conto non valido!");
 
     let nuovoSaldo = selectedAccount.saldoIniziale;
     if (form.type === "entrata") nuovoSaldo += importoNum;
@@ -73,7 +75,7 @@ export default function TransactionForm({
 
   return (
     <div className="card p-3 mb-5">
-      <h5 className="mb-3 fw-semibold">Aggiungi Transazione</h5>
+      <h4 className="mb-3 fw-semibold">Aggiungi Transazione</h4>
 
       {/* Selettore conto */}
       <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-3">
@@ -150,6 +152,33 @@ export default function TransactionForm({
           Aggiungi
         </button>
       </form>
+
+      {/* 🔸 ALERT POPUP */}
+      {alertMessage && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1050 }}
+        >
+          <div
+            className="p-4 rounded shadow text-center"
+            style={{
+              backgroundColor: "#f7efde",
+              color: "black",
+              width: "90%",
+              maxWidth: "400px",
+            }}
+          >
+            <h6 className="mb-3 fw-semibold">Avviso</h6>
+            <p>{alertMessage}</p>
+            <button
+              className="btn btn-primary mt-2"
+              onClick={() => setAlertMessage("")}
+            >
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

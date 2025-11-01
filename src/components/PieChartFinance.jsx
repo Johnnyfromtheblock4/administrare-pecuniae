@@ -8,7 +8,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { db } from "../firebaseConfig";
-import { deleteDoc, doc } from "firebase/firestore";
+import { deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { handleGeneratePDF } from "../utils/pdfUtils";
 
 const COLORS = [
@@ -36,22 +36,47 @@ export default function PieChartFinance({
   onSelectAccount,
 }) {
   const [alertMessage, setAlertMessage] = useState("");
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [confirmDeleteTx, setConfirmDeleteTx] = useState(null);
 
   // --- ELIMINAZIONE TRANSAZIONE ---
-  const handleDeleteTransaction = (id) => {
-    setConfirmDeleteId(id);
+  const handleDeleteTransaction = (t) => {
+    setConfirmDeleteTx(t);
   };
 
   const confirmDeleteTransaction = async () => {
+    if (!confirmDeleteTx) return;
     try {
-      await deleteDoc(doc(db, "transactions", confirmDeleteId));
-      setTransactions((prev) => prev.filter((t) => t.id !== confirmDeleteId));
-      setConfirmDeleteId(null);
-      setAlertMessage("Transazione eliminata con successo.");
+      const t = confirmDeleteTx;
+
+      // 🔹 Recupera il conto associato
+      const account = accounts.find((a) => a.id === t.conto);
+      if (account) {
+        let nuovoSaldo = Number(account.saldoIniziale);
+        const importo = Number(t.importo);
+
+        // Ripristina il saldo in base al tipo di transazione
+        if (t.type === "entrata") {
+          nuovoSaldo -= importo; // rimuove un’entrata
+        } else if (t.type === "uscita" || t.type === "risparmio") {
+          nuovoSaldo += importo; // rimuove un’uscita o risparmio
+        }
+
+        // Aggiorna Firestore
+        await updateDoc(doc(db, "accounts", account.id), {
+          saldoIniziale: nuovoSaldo,
+        });
+      }
+
+      // Elimina la transazione
+      await deleteDoc(doc(db, "transactions", t.id));
+      setTransactions((prev) => prev.filter((x) => x.id !== t.id));
+
+      setAlertMessage("Transazione eliminata e saldo aggiornato.");
     } catch (error) {
       console.error(error);
       setAlertMessage("Errore durante l’eliminazione della transazione.");
+    } finally {
+      setConfirmDeleteTx(null);
     }
   };
 
@@ -213,14 +238,18 @@ export default function PieChartFinance({
             >
               <div>
                 <strong>{t.categoria}</strong> — €{t.importo.toFixed(2)}
-                <br />
-                <small className="text-muted">
+                {t.descrizione && (
+                  <div className="text-muted small fst-italic mt-1">
+                    “{t.descrizione}”
+                  </div>
+                )}
+                <small className="text-muted d-block mt-1">
                   {new Date(t.data).toLocaleDateString("it-IT")}
                 </small>
               </div>
               <button
                 className="btn btn-sm btn-danger"
-                onClick={() => handleDeleteTransaction(t.id)}
+                onClick={() => handleDeleteTransaction(t)}
               >
                 🗑️
               </button>
@@ -229,7 +258,7 @@ export default function PieChartFinance({
         </ul>
       )}
 
-      {/* GRAFICI PER TIPO */}
+      {/* GRAFICI E TOTALE MENSILE */}
       <div className="row">
         {[
           { title: "Entrate", color: "text-success", data: entrateData },
@@ -247,8 +276,6 @@ export default function PieChartFinance({
                       dataKey="value"
                       nameKey="name"
                       outerRadius={120}
-                      cx="50%"
-                      cy="50%"
                       label
                     >
                       {data.map((_, j) => (
@@ -289,8 +316,6 @@ export default function PieChartFinance({
                   dataKey="value"
                   nameKey="name"
                   outerRadius={150}
-                  cx="50%"
-                  cy="50%"
                   label={({ name, value }) => `${name}: €${value.toFixed(2)}`}
                 >
                   {totaleData.map((d, i) => (
@@ -309,19 +334,7 @@ export default function PieChartFinance({
         )}
       </div>
 
-      {/* Pulsante PDF */}
-      {totaleData.length > 0 && (
-        <div className="text-center mt-4">
-          <button
-            className="btn btn-primary px-4 py-2"
-            onClick={handlePDFExport}
-          >
-            📄 Esporta resoconto in PDF
-          </button>
-        </div>
-      )}
-
-      {/* 🔸 POPUP ALERT */}
+      {/* POPUP ALERT */}
       {alertMessage && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
@@ -348,8 +361,8 @@ export default function PieChartFinance({
         </div>
       )}
 
-      {/* 🔹 POPUP CONFERMA ELIMINAZIONE */}
-      {confirmDeleteId && (
+      {/* POPUP CONFERMA ELIMINAZIONE */}
+      {confirmDeleteTx && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
           style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1050 }}
@@ -364,11 +377,15 @@ export default function PieChartFinance({
             }}
           >
             <h6 className="mb-3 fw-semibold">Conferma eliminazione</h6>
-            <p>Vuoi davvero eliminare questa transazione?</p>
+            <p>
+              Vuoi davvero eliminare la transazione{" "}
+              <strong>{confirmDeleteTx.categoria}</strong> da{" "}
+              <strong>€{confirmDeleteTx.importo}</strong>?
+            </p>
             <div className="d-flex justify-content-center gap-3 mt-3">
               <button
                 className="btn btn-secondary"
-                onClick={() => setConfirmDeleteId(null)}
+                onClick={() => setConfirmDeleteTx(null)}
               >
                 Annulla
               </button>

@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from "react";
 
 export default function TransactionTable({ transactions, onDelete, accounts }) {
-  // 🔹 Impostazioni iniziali per mese e anno correnti
+  // Impostazioni iniziali per mese e anno correnti
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear);
 
-  // 🔹 Nomi mesi in italiano
+  // Nomi mesi in italiano
   const months = [
     "Gennaio",
     "Febbraio",
@@ -24,7 +24,7 @@ export default function TransactionTable({ transactions, onDelete, accounts }) {
     "Dicembre",
   ];
 
-  // 🔹 Filtra le transazioni per mese e anno
+  // Filtra le transazioni per mese e anno
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
       const date = new Date(t.data);
@@ -45,7 +45,7 @@ export default function TransactionTable({ transactions, onDelete, accounts }) {
     <div className="card p-4 mb-5">
       <h4 className="mb-3 fw-semibold text-center">📑 Storico transazioni</h4>
 
-      {/* 🔽 MENU FILTRI PER MESE E ANNO */}
+      {/* MENU FILTRI PER MESE E ANNO */}
       <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-3">
         {/* Selettore mese */}
         <select
@@ -74,7 +74,7 @@ export default function TransactionTable({ transactions, onDelete, accounts }) {
         </select>
       </div>
 
-      {/* 🔹 Tabella transazioni filtrate */}
+      {/* Tabella transazioni filtrate */}
       {filteredTransactions.length === 0 ? (
         <p className="text-center text-muted m-0">
           Nessuna transazione per {months[selectedMonth]} {selectedYear}.

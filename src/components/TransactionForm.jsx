@@ -18,7 +18,7 @@ export default function TransactionForm({
     importo: "",
     data: "",
     conto: chartAccountId || "",
-    descrizione: "", // 🆕 campo facoltativo
+    descrizione: "", // campo facoltativo
   });
 
   const [alertMessage, setAlertMessage] = useState("");
@@ -45,18 +45,22 @@ export default function TransactionForm({
     const selectedAccount = accounts.find((a) => a.id === contoId);
     if (!selectedAccount) return setAlertMessage("Conto non valido!");
 
-    let nuovoSaldo = selectedAccount.saldoIniziale;
-    if (form.type === "entrata") nuovoSaldo += importoNum;
-    if (form.type === "uscita" || form.type === "risparmio")
-      nuovoSaldo -= importoNum;
+    // Calcola sempre il nuovo saldo effettivo, indipendentemente dalla data
+    let nuovoSaldo = Number(selectedAccount.saldoIniziale);
+
+    if (form.type === "entrata") {
+      nuovoSaldo += importoNum; // aggiunge sempre al saldo
+    } else if (form.type === "uscita" || form.type === "risparmio") {
+      nuovoSaldo -= importoNum; // sottrae sempre dal saldo
+    }
 
     try {
-      // 🔄 Aggiorna saldo conto
+      // Aggiorna subito il saldo attuale del conto
       await updateDoc(doc(db, "accounts", selectedAccount.id), {
         saldoIniziale: nuovoSaldo,
       });
 
-      // 💾 Salva transazione su Firestore
+      // Salva transazione su Firestore
       await addDoc(collection(db, "transactions"), {
         ...form,
         conto: contoId,
@@ -65,7 +69,7 @@ export default function TransactionForm({
         createdAt: new Date(),
       });
 
-      // 🧹 Reset form
+      // Reset form
       setForm({
         type: "entrata",
         categoria: "",
@@ -74,6 +78,8 @@ export default function TransactionForm({
         conto: contoId,
         descrizione: "",
       });
+
+      setAlertMessage("✅ Transazione aggiunta e saldo aggiornato!");
     } catch (error) {
       console.error("Errore aggiunta transazione:", error);
       setAlertMessage("Errore durante il salvataggio della transazione.");
@@ -84,7 +90,7 @@ export default function TransactionForm({
     <div className="card p-3 mb-5">
       <h4 className="mb-3 fw-semibold">Aggiungi Transazione</h4>
 
-      {/* 🔹 Selettore conto */}
+      {/* Selettore conto */}
       <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-3">
         <select
           className="form-select w-auto"
@@ -103,7 +109,7 @@ export default function TransactionForm({
         </select>
       </div>
 
-      {/* 🔸 FORM */}
+      {/* FORM */}
       <form
         onSubmit={handleSubmit}
         className="d-flex flex-wrap justify-content-center gap-3"
@@ -155,7 +161,7 @@ export default function TransactionForm({
           }}
         />
 
-        {/* 🆕 Campo descrizione (facoltativo) */}
+        {/* Campo descrizione (facoltativo) */}
         <input
           type="text"
           name="descrizione"

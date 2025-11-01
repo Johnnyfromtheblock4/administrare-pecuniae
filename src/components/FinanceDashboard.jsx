@@ -28,7 +28,7 @@ export default function FinanceDashboard() {
   const [alertMessage, setAlertMessage] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
 
-  // 🔹 Rileva se l'utente è loggato
+  // Rileva se l'utente è loggato
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser || null);
@@ -36,7 +36,7 @@ export default function FinanceDashboard() {
     return () => unsubscribe();
   }, []);
 
-  // 🔹 Carica dati in tempo reale da Firestore
+  // Carica dati in tempo reale da Firestore
   useEffect(() => {
     if (!user) return;
 
@@ -71,12 +71,12 @@ export default function FinanceDashboard() {
     };
   }, [user]);
 
-  // 🔹 Avvia eliminazione (mostra popup)
+  // Avvia eliminazione (mostra popup)
   const handleDeleteTransaction = (t) => {
     setConfirmDelete(t);
   };
 
-  // 🔹 Conferma eliminazione
+  // Conferma eliminazione
   const confirmDeleteTransaction = async () => {
     if (!confirmDelete) return;
 
@@ -116,7 +116,7 @@ export default function FinanceDashboard() {
     }
   };
 
-  // 🔹 Se non loggato
+  // Se non loggato
   if (!user) {
     return (
       <div className="text-center my-5">
@@ -178,7 +178,7 @@ export default function FinanceDashboard() {
         setTransactions={setTransactions}
       />
 
-      {/* 🔸 POPUP ALERT */}
+      {/* POPUP ALERT */}
       {alertMessage && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
@@ -205,7 +205,7 @@ export default function FinanceDashboard() {
         </div>
       )}
 
-      {/* 🔹 POPUP CONFERMA ELIMINAZIONE */}
+      {/* POPUP CONFERMA ELIMINAZIONE */}
       {confirmDelete && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"

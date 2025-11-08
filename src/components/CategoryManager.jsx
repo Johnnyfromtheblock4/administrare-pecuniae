@@ -57,7 +57,7 @@ export default function CategoryManager({
           style={{ cursor: "pointer" }}
           onClick={() => setIsOpen(!isOpen)} // clic sul titolo per aprire/chiudere
         >
-          Categorie Personalizzate
+          🖇️​ Categorie Personalizzate
         </h4>
 
         {/* Pulsante con icona Font Awesome */}

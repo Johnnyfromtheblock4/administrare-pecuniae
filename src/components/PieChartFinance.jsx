@@ -37,6 +37,7 @@ export default function PieChartFinance({
 }) {
   const [alertMessage, setAlertMessage] = useState("");
   const [confirmDeleteTx, setConfirmDeleteTx] = useState(null);
+  const [showTransactions, setShowTransactions] = useState(false);
 
   // --- ELIMINAZIONE TRANSAZIONE ---
   const handleDeleteTransaction = (t) => {
@@ -228,35 +229,74 @@ export default function PieChartFinance({
           : "Tutti i conti"}
       </h6>
 
-      {/* ELENCO TRANSAZIONI */}
-      {filteredTransactions.length > 0 && (
-        <ul className="list-group mb-4">
-          {filteredTransactions.map((t) => (
-            <li
-              key={t.id}
-              className="list-group-item d-flex justify-content-between align-items-center"
-            >
-              <div>
-                <strong>{t.categoria}</strong> — €{t.importo.toFixed(2)}
-                {t.descrizione && (
-                  <div className="text-muted small fst-italic mt-1">
-                    “{t.descrizione}”
-                  </div>
-                )}
-                <small className="text-muted d-block mt-1">
-                  {new Date(t.data).toLocaleDateString("it-IT")}
-                </small>
-              </div>
-              <button
-                className="btn btn-sm btn-danger"
-                onClick={() => handleDeleteTransaction(t)}
-              >
-                🗑️
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* ELENCO TRANSAZIONI A SCOMPARSA */}
+      <div className="card p-3 mb-4 shadow-sm">
+        <div className="d-flex justify-content-between align-items-center">
+          <h5
+            className="fw-semibold mb-0"
+            style={{ cursor: "pointer" }}
+            onClick={() => setShowTransactions((prev) => !prev)}
+          >
+            Elenco Transazioni
+          </h5>
+
+          {/* Pulsante + / - */}
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowTransactions((prev) => !prev)}
+          >
+            {showTransactions ? (
+              <i className="fa-solid fa-minus"></i>
+            ) : (
+              <i className="fa-solid fa-plus"></i>
+            )}
+          </button>
+        </div>
+
+        {/* Contenuto visibile solo se showTransactions === true */}
+        {showTransactions && (
+          <>
+            {filteredTransactions.length > 0 ? (
+              <ul className="list-group mt-3">
+                {filteredTransactions
+                  .slice() // copia l’array per non mutarlo
+                  .sort(
+                    (a, b) =>
+                      new Date(b.data).getTime() - new Date(a.data).getTime()
+                  ) // ordina per data (più recente prima)
+                  .map((t) => (
+                    <li
+                      key={t.id}
+                      className="list-group-item d-flex justify-content-between align-items-center"
+                    >
+                      <div>
+                        <strong>{t.categoria}</strong> — €{t.importo.toFixed(2)}
+                        {t.descrizione && (
+                          <div className="text-muted small fst-italic mt-1">
+                            “{t.descrizione}”
+                          </div>
+                        )}
+                        <small className="text-muted d-block mt-1">
+                          {new Date(t.data).toLocaleDateString("it-IT")}
+                        </small>
+                      </div>
+                      <button
+                        className="btn btn-sm btn-danger"
+                        onClick={() => handleDeleteTransaction(t)}
+                      >
+                        🗑️
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <p className="text-center text-muted mt-3 mb-0">
+                Nessuna transazione per questo mese.
+              </p>
+            )}
+          </>
+        )}
+      </div>
 
       {/* GRAFICI E TOTALE MENSILE */}
       <div className="row">

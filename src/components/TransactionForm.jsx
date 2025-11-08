@@ -88,7 +88,7 @@ export default function TransactionForm({
 
   return (
     <div className="card p-3 mb-5">
-      <h4 className="mb-3 fw-semibold">Aggiungi Transazione</h4>
+      <h4 className="mb-3 fw-semibold">➕​​ Aggiungi Transazione</h4>
 
       {/* Selettore conto */}
       <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-3">

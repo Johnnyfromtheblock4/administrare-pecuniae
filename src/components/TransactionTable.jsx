@@ -8,6 +8,9 @@ export default function TransactionTable({ transactions, onDelete, accounts }) {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear);
 
+  // Stato per la card a scomparsa
+  const [isOpen, setIsOpen] = useState(false);
+
   // Nomi mesi in italiano
   const months = [
     "Gennaio",
@@ -34,6 +37,7 @@ export default function TransactionTable({ transactions, onDelete, accounts }) {
     });
   }, [transactions, selectedMonth, selectedYear]);
 
+  // Se non ci sono transazioni globalmente
   if (transactions.length === 0)
     return (
       <div className="card p-4 mb-5">
@@ -43,86 +47,117 @@ export default function TransactionTable({ transactions, onDelete, accounts }) {
 
   return (
     <div className="card p-4 mb-5">
-      <h4 className="mb-3 fw-semibold text-center">📑 Storico transazioni</h4>
-
-      {/* MENU FILTRI PER MESE E ANNO */}
-      <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-3">
-        {/* Selettore mese */}
-        <select
-          className="form-select w-auto"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(Number(e.target.value))}
+      {/* HEADER CON PULSANTE A SCOMPARSA */}
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <h4
+          className="fw-semibold text-center m-0"
+          style={{ cursor: "pointer" }}
+          onClick={() => setIsOpen(!isOpen)}
         >
-          {months.map((m, i) => (
-            <option key={i} value={i}>
-              {m}
-            </option>
-          ))}
-        </select>
+          📑 Storico transazioni
+        </h4>
 
-        {/* Selettore anno */}
-        <select
-          className="form-select w-auto"
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(Number(e.target.value))}
-        >
-          {Array.from({ length: 5 }, (_, i) => currentYear - i).map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
+        <button className="btn btn-primary" onClick={() => setIsOpen(!isOpen)}>
+          {isOpen ? (
+            <i className="fa-solid fa-minus"></i>
+          ) : (
+            <i className="fa-solid fa-plus"></i>
+          )}
+        </button>
       </div>
 
-      {/* Tabella transazioni filtrate */}
-      {filteredTransactions.length === 0 ? (
-        <p className="text-center text-muted m-0">
-          Nessuna transazione per {months[selectedMonth]} {selectedYear}.
-        </p>
-      ) : (
-        <div className="table-responsive">
-          <table className="table table-striped align-middle">
-            <thead className="table-dark">
-              <tr>
-                <th>Data</th>
-                <th>Tipo</th>
-                <th>Categoria</th>
-                <th>Importo (€)</th>
-                <th>Conto</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTransactions.map((t) => (
-                <tr key={t.id}>
-                  <td>{t.data}</td>
-                  <td
-                    className={
-                      t.type === "entrata"
-                        ? "text-success fw-bold"
-                        : t.type === "uscita"
-                        ? "text-danger fw-bold"
-                        : "text-primary fw-bold"
-                    }
-                  >
-                    {t.type}
-                  </td>
-                  <td>{t.categoria || "-"}</td>
-                  <td>{Number(t.importo).toFixed(2)}</td>
-                  <td>{accounts.find((a) => a.id === t.conto)?.nome || "—"}</td>
-                  <td>
-                    <button
-                      className="btn btn-sm btn-outline-danger"
-                      onClick={() => onDelete(t)}
-                    >
-                      🗑️ Elimina
-                    </button>
-                  </td>
-                </tr>
+      {/* CONTENUTO DELLA CARD (solo se aperta) */}
+      {isOpen && (
+        <>
+          {/* MENU FILTRI PER MESE E ANNO */}
+          <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-3">
+            {/* Selettore mese */}
+            <select
+              className="form-select w-auto"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            >
+              {months.map((m, i) => (
+                <option key={i} value={i}>
+                  {m}
+                </option>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </select>
+
+            {/* Selettore anno */}
+            <select
+              className="form-select w-auto"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+            >
+              {Array.from({ length: 5 }, (_, i) => currentYear - i).map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tabella transazioni filtrate */}
+          {filteredTransactions.length === 0 ? (
+            <p className="text-center text-muted m-0">
+              Nessuna transazione per {months[selectedMonth]} {selectedYear}.
+            </p>
+          ) : (
+            <div className="table-responsive">
+              <table className="table table-striped align-middle">
+                <thead className="table-dark">
+                  <tr>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Categoria</th>
+                    <th>Importo (€)</th>
+                    <th>Conto</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Ordina le transazioni per data (più recenti in alto) */}
+                  {filteredTransactions
+                    .slice()
+                    .sort(
+                      (a, b) =>
+                        new Date(b.data).getTime() - new Date(a.data).getTime()
+                    )
+                    .map((t) => (
+                      <tr key={t.id}>
+                        <td>{new Date(t.data).toLocaleDateString("it-IT")}</td>
+                        <td
+                          className={
+                            t.type === "entrata"
+                              ? "text-success fw-bold"
+                              : t.type === "uscita"
+                              ? "text-danger fw-bold"
+                              : "text-primary fw-bold"
+                          }
+                        >
+                          {t.type}
+                        </td>
+                        <td>{t.categoria || "-"}</td>
+                        <td>{Number(t.importo).toFixed(2)}</td>
+                        <td>
+                          {accounts.find((a) => a.id === t.conto)?.nome || "—"}
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => onDelete(t)}
+                          >
+                            🗑️ Elimina
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

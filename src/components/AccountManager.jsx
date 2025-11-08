@@ -19,6 +19,8 @@ export default function AccountManager({
   const [newAccount, setNewAccount] = useState({ nome: "", saldoIniziale: "" });
   // ID del conto in modifica
   const [editAccountId, setEditAccountId] = useState(null);
+  // Dati in modifica
+  const [editData, setEditData] = useState({ nome: "", saldoIniziale: "" });
   // Messaggio di avviso
   const [alertMessage, setAlertMessage] = useState("");
   // ID conto da eliminare (per la modale di conferma)
@@ -40,6 +42,14 @@ export default function AccountManager({
     });
 
     if (accounts.length === 0) setChartAccountId(docRef.id);
+    setAccounts((prev) => [
+      ...prev,
+      {
+        id: docRef.id,
+        nome: newAccount.nome,
+        saldoIniziale: Number(newAccount.saldoIniziale),
+      },
+    ]);
     setNewAccount({ nome: "", saldoIniziale: "" });
   };
 
@@ -55,10 +65,11 @@ export default function AccountManager({
       )
     );
     setEditAccountId(null);
+    setEditData({ nome: "", saldoIniziale: "" });
   };
 
   // Apre la conferma eliminazione
-  const handleDeleteAccount = async (id) => {
+  const handleDeleteAccount = (id) => {
     setConfirmDelete(id);
   };
 
@@ -148,34 +159,25 @@ export default function AccountManager({
               >
                 {editAccountId === a.id ? (
                   <>
-                    {/* Modalità modifica conto */}
+                    {/* Modalità modifica */}
                     <div className="d-flex flex-column flex-md-row gap-2 w-100">
                       <input
                         type="text"
                         className="form-control"
-                        value={a.nome}
+                        value={editData.nome}
                         onChange={(e) =>
-                          setAccounts((prev) =>
-                            prev.map((acc) =>
-                              acc.id === a.id
-                                ? { ...acc, nome: e.target.value }
-                                : acc
-                            )
-                          )
+                          setEditData({ ...editData, nome: e.target.value })
                         }
                       />
                       <input
                         type="number"
                         className="form-control"
-                        value={a.saldoIniziale}
+                        value={editData.saldoIniziale}
                         onChange={(e) =>
-                          setAccounts((prev) =>
-                            prev.map((acc) =>
-                              acc.id === a.id
-                                ? { ...acc, saldoIniziale: e.target.value }
-                                : acc
-                            )
-                          )
+                          setEditData({
+                            ...editData,
+                            saldoIniziale: e.target.value,
+                          })
                         }
                       />
                     </div>
@@ -184,22 +186,26 @@ export default function AccountManager({
                       <button
                         className="btn btn-sm btn-success"
                         onClick={() =>
-                          handleEditAccount(a.id, a.nome, a.saldoIniziale)
+                          handleEditAccount(
+                            a.id,
+                            editData.nome,
+                            editData.saldoIniziale
+                          )
                         }
                       >
-                        ✓
+                        💾 Salva
                       </button>
                       <button
                         className="btn btn-sm btn-secondary"
                         onClick={() => setEditAccountId(null)}
                       >
-                        ✗
+                        ❌ Annulla
                       </button>
                     </div>
                   </>
                 ) : (
                   <>
-                    {/* Visualizzazione normale conto */}
+                    {/* Visualizzazione normale */}
                     <div className="d-flex flex-column flex-md-row justify-content-between w-100 align-items-md-center mx-3">
                       <strong className="text-dark fs-6">{a.nome}</strong>
                       <span className="text-muted mt-1 mt-md-0">
@@ -209,16 +215,22 @@ export default function AccountManager({
 
                     <div className="d-flex gap-2 mt-2 mt-md-0 justify-content-end">
                       <button
-                        className="btn btn-sm btn-success"
-                        onClick={() => setEditAccountId(a.id)}
+                        className="btn btn-sm btn-primary"
+                        onClick={() => {
+                          setEditAccountId(a.id);
+                          setEditData({
+                            nome: a.nome,
+                            saldoIniziale: a.saldoIniziale,
+                          });
+                        }}
                       >
-                        ✎
+                        ✏️ Modifica
                       </button>
                       <button
                         className="btn btn-sm btn-danger"
                         onClick={() => handleDeleteAccount(a.id)}
                       >
-                        🗑
+                        🗑️ Elimina
                       </button>
                     </div>
                   </>

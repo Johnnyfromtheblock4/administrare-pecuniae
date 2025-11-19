@@ -83,10 +83,10 @@ export default function TransactionForm({
         descrizione: "",
       });
 
-      setAlertMessage("Transazione aggiunta e saldo aggiornato!");
+      setAlertMessage("✅ Transazione aggiunta e saldo aggiornato!");
     } catch (error) {
-      console.error("Errore aggiunta transazione:", error);
-      setAlertMessage("Errore durante il salvataggio della transazione.");
+      console.error("❌ Errore aggiunta transazione:", error);
+      setAlertMessage("❌ Errore durante il salvataggio della transazione.");
     }
   };
 
@@ -143,7 +143,7 @@ export default function TransactionForm({
           ))}
         </select>
 
-        {/* Input importo con step 0.01 per garantire due decimali */}
+        {/* Input importo */}
         <input
           type="number"
           name="importo"
@@ -167,7 +167,7 @@ export default function TransactionForm({
           }}
         />
 
-        {/* Campo descrizione (facoltativo) */}
+        {/* Campo descrizione */}
         <input
           type="text"
           name="descrizione"

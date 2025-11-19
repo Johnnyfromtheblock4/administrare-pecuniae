@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { db } from "../firebaseConfig";
 import { deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { toMoney } from "../utils/numberUtils"; // Import per arrotondamento a 2 decimali
 
 const COLORS = [
   "#4CAF50",
@@ -53,7 +54,7 @@ export default function PieChartFinance({
       const account = accounts.find((a) => a.id === t.conto);
       if (account) {
         let nuovoSaldo = Number(account.saldoIniziale);
-        const importo = Number(t.importo);
+        const importo = toMoney(t.importo);
 
         // Ripristina il saldo in base al tipo di transazione
         if (t.type === "entrata") {
@@ -98,11 +99,19 @@ export default function PieChartFinance({
   // --- GROUP BY CATEGORIA ---
   const groupByCategory = (list) => {
     const result = {};
+
     list.forEach((t) => {
       if (!result[t.categoria]) result[t.categoria] = 0;
-      result[t.categoria] += Number(t.importo);
+
+      // Aggiunta arrotondata per ogni transazione
+      result[t.categoria] += toMoney(t.importo);
     });
-    return Object.entries(result).map(([name, value]) => ({ name, value }));
+
+    // Conversione in array con valori arrotondati
+    return Object.entries(result).map(([name, value]) => ({
+      name,
+      value: toMoney(value),
+    }));
   };
 
   const entrateData = useMemo(
@@ -125,10 +134,14 @@ export default function PieChartFinance({
     [filteredTransactions]
   );
 
-  // --- TOTALI ---
-  const totaleEntrate = entrateData.reduce((sum, d) => sum + d.value, 0);
-  const totaleUscite = usciteData.reduce((sum, d) => sum + d.value, 0);
-  const totaleRisparmi = risparmiData.reduce((sum, d) => sum + d.value, 0);
+  // --- TOTALI CON ARROTONDAMENTO ---
+  const totaleEntrate = toMoney(
+    entrateData.reduce((sum, d) => sum + d.value, 0)
+  );
+  const totaleUscite = toMoney(usciteData.reduce((sum, d) => sum + d.value, 0));
+  const totaleRisparmi = toMoney(
+    risparmiData.reduce((sum, d) => sum + d.value, 0)
+  );
 
   const totaleData = [
     { name: "Entrate", value: totaleEntrate, color: "#4CAF50" },
@@ -260,7 +273,7 @@ export default function PieChartFinance({
                     >
                       <div>
                         <strong>{t.categoria}</strong> — €
-                        {Number(t.importo).toFixed(2)}
+                        {toMoney(t.importo).toFixed(2)}
                         {t.descrizione && (
                           <div className="text-muted small fst-italic mt-1">
                             “{t.descrizione}”
@@ -321,13 +334,15 @@ export default function PieChartFinance({
                       dataKey="value"
                       nameKey="name"
                       outerRadius={120}
-                      label
+                      label={({ name, value }) =>
+                        `${name}: €${toMoney(value).toFixed(2)}`
+                      }
                     >
                       {data.map((_, j) => (
                         <Cell key={j} fill={COLORS[j % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v) => `€${Number(v).toFixed(2)}`} />
+                    <Tooltip formatter={(v) => `€${toMoney(v).toFixed(2)}`} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -361,13 +376,15 @@ export default function PieChartFinance({
                   dataKey="value"
                   nameKey="name"
                   outerRadius={150}
-                  label={({ name, value }) => `${name}: €${value.toFixed(2)}`}
+                  label={({ name, value }) =>
+                    `${name}: €${toMoney(value).toFixed(2)}`
+                  }
                 >
                   {totaleData.map((d, i) => (
                     <Cell key={i} fill={d.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v) => `€${Number(v).toFixed(2)}`} />
+                <Tooltip formatter={(v) => `€${toMoney(v).toFixed(2)}`} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -425,7 +442,7 @@ export default function PieChartFinance({
             <p>
               Vuoi davvero eliminare la transazione{" "}
               <strong>{confirmDeleteTx.categoria}</strong> da{" "}
-              <strong>€{confirmDeleteTx.importo}</strong>?
+              <strong>€{toMoney(confirmDeleteTx.importo).toFixed(2)}</strong>?
             </p>
             <div className="d-flex justify-content-center gap-3 mt-3">
               <button

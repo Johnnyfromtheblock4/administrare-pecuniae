@@ -8,6 +8,9 @@ import {
   doc,
 } from "firebase/firestore";
 
+// Import utilità per forzare 2 decimali
+import { toMoney } from "../utils/numberUtils";
+
 export default function AccountManager({
   user,
   accounts,
@@ -15,17 +18,11 @@ export default function AccountManager({
   chartAccountId,
   setChartAccountId,
 }) {
-  // Stato per il nuovo conto
   const [newAccount, setNewAccount] = useState({ nome: "", saldoIniziale: "" });
-  // ID del conto in modifica
   const [editAccountId, setEditAccountId] = useState(null);
-  // Dati in modifica
   const [editData, setEditData] = useState({ nome: "", saldoIniziale: "" });
-  // Messaggio di avviso
   const [alertMessage, setAlertMessage] = useState("");
-  // ID conto da eliminare (per la modale di conferma)
   const [confirmDelete, setConfirmDelete] = useState(null);
-  // Stato per mostrare/nascondere la card
   const [isOpen, setIsOpen] = useState(false);
 
   // Aggiunge un nuovo conto
@@ -35,35 +32,43 @@ export default function AccountManager({
       return setAlertMessage("Compila tutti i campi!");
     if (!user) return setAlertMessage("Devi essere loggato!");
 
+    const saldoArrotondato = toMoney(newAccount.saldoIniziale);
+
     const docRef = await addDoc(collection(db, "accounts"), {
       nome: newAccount.nome,
-      saldoIniziale: Number(newAccount.saldoIniziale),
+      saldoIniziale: saldoArrotondato,
       uid: user.uid,
     });
 
     if (accounts.length === 0) setChartAccountId(docRef.id);
+
     setAccounts((prev) => [
       ...prev,
       {
         id: docRef.id,
         nome: newAccount.nome,
-        saldoIniziale: Number(newAccount.saldoIniziale),
+        saldoIniziale: saldoArrotondato,
       },
     ]);
+
     setNewAccount({ nome: "", saldoIniziale: "" });
   };
 
   // Modifica un conto
   const handleEditAccount = async (id, nome, saldo) => {
+    const saldoArrotondato = toMoney(saldo);
+
     await updateDoc(doc(db, "accounts", id), {
       nome,
-      saldoIniziale: Number(saldo),
+      saldoIniziale: saldoArrotondato,
     });
+
     setAccounts((prev) =>
       prev.map((a) =>
-        a.id === id ? { ...a, nome, saldoIniziale: Number(saldo) } : a
+        a.id === id ? { ...a, nome, saldoIniziale: saldoArrotondato } : a
       )
     );
+
     setEditAccountId(null);
     setEditData({ nome: "", saldoIniziale: "" });
   };
@@ -76,11 +81,12 @@ export default function AccountManager({
   // Conferma l'eliminazione
   const confirmDeleteAccount = async () => {
     await deleteDoc(doc(db, "accounts", confirmDelete));
+
     setAccounts((prev) => prev.filter((a) => a.id !== confirmDelete));
+
     setConfirmDelete(null);
   };
 
-  // Calcolo del totale dei conti
   const totalBalance = accounts.reduce(
     (sum, a) => sum + Number(a.saldoIniziale || 0),
     0
@@ -93,14 +99,10 @@ export default function AccountManager({
         className="d-flex justify-content-between align-items-center"
         style={{ cursor: "pointer" }}
       >
-        <h4
-          className="mb-0 fw-semibold"
-          onClick={() => setIsOpen(!isOpen)} // toggle apertura/chiusura cliccando sul titolo
-        >
+        <h4 className="mb-0 fw-semibold" onClick={() => setIsOpen(!isOpen)}>
           💰 Gestione Conti
         </h4>
 
-        {/* Pulsante con icona Font Awesome */}
         <button className="btn btn-primary" onClick={() => setIsOpen(!isOpen)}>
           {isOpen ? (
             <i className="fa-solid fa-minus"></i>
@@ -110,7 +112,7 @@ export default function AccountManager({
         </button>
       </div>
 
-      {/* CONTENUTO DELLA CARD (visibile solo se isOpen === true) */}
+      {/* CONTENUTO DELLA CARD */}
       {isOpen && (
         <>
           {/* Form di aggiunta conto */}
@@ -133,6 +135,7 @@ export default function AccountManager({
             <div className="col-12 col-md-auto">
               <input
                 type="number"
+                step="0.01"
                 placeholder="Saldo iniziale €"
                 className="form-control"
                 value={newAccount.saldoIniziale}
@@ -166,11 +169,15 @@ export default function AccountManager({
                         className="form-control"
                         value={editData.nome}
                         onChange={(e) =>
-                          setEditData({ ...editData, nome: e.target.value })
+                          setEditData({
+                            ...editData,
+                            nome: e.target.value,
+                          })
                         }
                       />
                       <input
                         type="number"
+                        step="0.01"
                         className="form-control"
                         value={editData.saldoIniziale}
                         onChange={(e) =>
@@ -193,13 +200,14 @@ export default function AccountManager({
                           )
                         }
                       >
-                        💾 Salva
+                        Salva
                       </button>
+
                       <button
                         className="btn btn-sm btn-secondary"
                         onClick={() => setEditAccountId(null)}
                       >
-                        ❌ Annulla
+                        Annulla
                       </button>
                     </div>
                   </>
@@ -209,7 +217,7 @@ export default function AccountManager({
                     <div className="d-flex flex-column flex-md-row justify-content-between w-100 align-items-md-center mx-3">
                       <strong className="text-dark fs-6">{a.nome}</strong>
                       <span className="text-muted mt-1 mt-md-0">
-                        €{a.saldoIniziale.toFixed(2)}
+                        €{Number(a.saldoIniziale).toFixed(2)}
                       </span>
                     </div>
 
@@ -224,13 +232,14 @@ export default function AccountManager({
                           });
                         }}
                       >
-                        ✏️ Modifica
+                        Modifica
                       </button>
+
                       <button
                         className="btn btn-sm btn-danger"
                         onClick={() => handleDeleteAccount(a.id)}
                       >
-                        🗑️ Elimina
+                        Elimina
                       </button>
                     </div>
                   </>
@@ -239,7 +248,6 @@ export default function AccountManager({
             ))}
           </ul>
 
-          {/* Totale dei conti */}
           {accounts.length > 0 && (
             <div className="mt-4 text-center">
               <h4 className="fw-bold text-dark">
@@ -248,10 +256,9 @@ export default function AccountManager({
             </div>
           )}
 
-          {/* Messaggio se nessun conto presente */}
           {accounts.length === 0 && (
             <p className="text-center text-muted mt-3">
-              Nessun conto presente. Aggiungine uno sopra ↑
+              Nessun conto presente. Aggiungine uno sopra.
             </p>
           )}
         </>
@@ -301,6 +308,7 @@ export default function AccountManager({
           >
             <h6 className="mb-3 fw-semibold">Conferma eliminazione</h6>
             <p>Vuoi davvero eliminare questo conto?</p>
+
             <div className="d-flex justify-content-center gap-3 mt-3">
               <button
                 className="btn btn-warning"
@@ -308,6 +316,7 @@ export default function AccountManager({
               >
                 Annulla
               </button>
+
               <button className="btn btn-danger" onClick={confirmDeleteAccount}>
                 Elimina
               </button>

@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import { db } from "../firebaseConfig";
 import { addDoc, collection, updateDoc, doc } from "firebase/firestore";
 
+// Import utilità per forzare 2 decimali
+import { toMoney } from "../utils/numberUtils";
+
 export default function TransactionForm({
   user,
   accounts,
@@ -41,26 +44,27 @@ export default function TransactionForm({
     if (!form.importo || !form.data || !form.categoria || !contoId)
       return setAlertMessage("Compila tutti i campi obbligatori!");
 
-    const importoNum = Number(form.importo);
+    // Arrotondamento importo a massimo 2 decimali
+    const importoNum = toMoney(form.importo);
+
     const selectedAccount = accounts.find((a) => a.id === contoId);
     if (!selectedAccount) return setAlertMessage("Conto non valido!");
 
-    // Calcola sempre il nuovo saldo effettivo, indipendentemente dalla data
     let nuovoSaldo = Number(selectedAccount.saldoIniziale);
 
     if (form.type === "entrata") {
-      nuovoSaldo += importoNum; // aggiunge sempre al saldo
+      nuovoSaldo += importoNum;
     } else if (form.type === "uscita" || form.type === "risparmio") {
-      nuovoSaldo -= importoNum; // sottrae sempre dal saldo
+      nuovoSaldo -= importoNum;
     }
 
     try {
-      // Aggiorna subito il saldo attuale del conto
+      // Aggiorna saldo conto con importo arrotondato
       await updateDoc(doc(db, "accounts", selectedAccount.id), {
-        saldoIniziale: nuovoSaldo,
+        saldoIniziale: toMoney(nuovoSaldo),
       });
 
-      // Salva transazione su Firestore
+      // Salva transazione con importo arrotondato
       await addDoc(collection(db, "transactions"), {
         ...form,
         conto: contoId,
@@ -79,7 +83,7 @@ export default function TransactionForm({
         descrizione: "",
       });
 
-      setAlertMessage("✅ Transazione aggiunta e saldo aggiornato!");
+      setAlertMessage("Transazione aggiunta e saldo aggiornato!");
     } catch (error) {
       console.error("Errore aggiunta transazione:", error);
       setAlertMessage("Errore durante il salvataggio della transazione.");
@@ -139,9 +143,11 @@ export default function TransactionForm({
           ))}
         </select>
 
+        {/* Input importo con step 0.01 per garantire due decimali */}
         <input
           type="number"
           name="importo"
+          step="0.01"
           className="form-control w-auto"
           placeholder="Importo €"
           value={form.importo}
@@ -176,7 +182,7 @@ export default function TransactionForm({
         </button>
       </form>
 
-      {/* 🔸 POPUP ALERT */}
+      {/* POPUP ALERT */}
       {alertMessage && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"

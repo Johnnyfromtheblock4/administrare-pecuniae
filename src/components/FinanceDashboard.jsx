@@ -221,12 +221,54 @@ export default function FinanceDashboard() {
         setTransactions={setTransactions}
       />
 
+      {/* Selettore mese + anno per esportazione */}
+      <div className="text-center mt-4 mb-3">
+        <div className="d-flex justify-content-center gap-3 flex-wrap">
+          <select
+            className="form-select w-auto"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+          >
+            {[
+              "Gennaio",
+              "Febbraio",
+              "Marzo",
+              "Aprile",
+              "Maggio",
+              "Giugno",
+              "Luglio",
+              "Agosto",
+              "Settembre",
+              "Ottobre",
+              "Novembre",
+              "Dicembre",
+            ].map((m, i) => (
+              <option key={i} value={i}>
+                {m}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="form-select w-auto"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+          >
+            {Array.from(
+              { length: 6 },
+              (_, i) => new Date().getFullYear() - i
+            ).map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Pulsante esportazione PDF mensile */}
-      <div className="text-center mt-4">
-        <button
-          className="btn btn-primary"
-          onClick={handleExportMonthlyPDF}
-        >
+      <div className="text-center">
+        <button className="btn btn-primary" onClick={handleExportMonthlyPDF}>
           Esporta resoconto mensile in PDF
         </button>
       </div>

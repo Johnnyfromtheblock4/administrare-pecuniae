@@ -47,7 +47,6 @@ export async function handleGeneratePDF({
   doc.text(`${monthName}`, 15, y);
 
   y += 5;
-  doc.setDrawColor(0);
   doc.line(15, y, 195, y);
   y += 12;
 
@@ -120,12 +119,11 @@ export async function handleGeneratePDF({
     head: [["Conto", "Tipo", "Totale (€)"]],
     body: summaryRows,
     headStyles: {
-      fillColor: [200, 200, 200], // Grigio
+      fillColor: [200, 200, 200],
       textColor: 0,
     },
-    styles: { fontSize: 11, fillColor: [255, 255, 255] },
+    styles: { fontSize: 11 },
     alternateRowStyles: { fillColor: [250, 243, 227] },
-    tableWidth: "auto",
   });
 
   // Storico transazioni
@@ -188,7 +186,7 @@ function applyBackground(doc) {
   );
 }
 
-// Caricamento logo immagine
+// Caricamento immagine (logo)
 function loadImage(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -199,10 +197,12 @@ function loadImage(url) {
   });
 }
 
-// Inserisce un grafico in una pagina separata
+// Pagina grafici senza sfondo bianco
 async function addChartPage(doc, elementId, title) {
   const element = document.getElementById(elementId);
   if (!element) return;
+
+  element.style.background = "transparent";
 
   doc.addPage();
   applyBackground(doc);
@@ -211,7 +211,12 @@ async function addChartPage(doc, elementId, title) {
   doc.setTextColor("#022D4C");
   doc.text(title, 15, 20);
 
-  const canvas = await html2canvas(element, { scale: 2, useCORS: true });
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    backgroundColor: null, // Rimuove lo sfondo bianco
+  });
+
   const imgData = canvas.toDataURL("image/png");
 
   const width = doc.internal.pageSize.getWidth() - 30;

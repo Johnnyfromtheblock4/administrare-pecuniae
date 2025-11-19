@@ -9,7 +9,6 @@ import {
 } from "recharts";
 import { db } from "../firebaseConfig";
 import { deleteDoc, doc, updateDoc } from "firebase/firestore";
-import { handleGeneratePDF } from "../utils/pdfUtils";
 
 const COLORS = [
   "#4CAF50",
@@ -46,10 +45,11 @@ export default function PieChartFinance({
 
   const confirmDeleteTransaction = async () => {
     if (!confirmDeleteTx) return;
+
     try {
       const t = confirmDeleteTx;
 
-      // 🔹 Recupera il conto associato
+      // Recupera il conto associato
       const account = accounts.find((a) => a.id === t.conto);
       if (account) {
         let nuovoSaldo = Number(account.saldoIniziale);
@@ -57,9 +57,9 @@ export default function PieChartFinance({
 
         // Ripristina il saldo in base al tipo di transazione
         if (t.type === "entrata") {
-          nuovoSaldo -= importo; // rimuove un’entrata
+          nuovoSaldo -= importo;
         } else if (t.type === "uscita" || t.type === "risparmio") {
-          nuovoSaldo += importo; // rimuove un’uscita o risparmio
+          nuovoSaldo += importo;
         }
 
         // Aggiorna Firestore
@@ -110,11 +110,13 @@ export default function PieChartFinance({
       groupByCategory(filteredTransactions.filter((t) => t.type === "entrata")),
     [filteredTransactions]
   );
+
   const usciteData = useMemo(
     () =>
       groupByCategory(filteredTransactions.filter((t) => t.type === "uscita")),
     [filteredTransactions]
   );
+
   const risparmiData = useMemo(
     () =>
       groupByCategory(
@@ -154,20 +156,9 @@ export default function PieChartFinance({
     { month: "long", year: "numeric" }
   );
 
-  const handlePDFExport = async () => {
-    try {
-      if (totaleData.length === 0)
-        return setAlertMessage("Nessun dato disponibile per questo mese.");
-      await handleGeneratePDF(selectedMonth, selectedYear, "chart-pdf");
-    } catch (error) {
-      console.error(error);
-      setAlertMessage("Errore durante l’esportazione del PDF.");
-    }
-  };
-
   return (
     <div className="card p-4 my-5">
-      <h4 className="mb-4 text-center fw-bold">📊 Analisi Finanziaria</h4>
+      <h4 className="mb-4 text-center fw-bold">Analisi Finanziaria</h4>
 
       {/* FILTRI */}
       <div className="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-4">
@@ -240,7 +231,6 @@ export default function PieChartFinance({
             Elenco Transazioni
           </h5>
 
-          {/* Pulsante + / - */}
           <button
             className="btn btn-primary"
             onClick={() => setShowTransactions((prev) => !prev)}
@@ -253,24 +243,24 @@ export default function PieChartFinance({
           </button>
         </div>
 
-        {/* Contenuto visibile solo se showTransactions === true */}
         {showTransactions && (
           <>
             {filteredTransactions.length > 0 ? (
               <ul className="list-group mt-3">
                 {filteredTransactions
-                  .slice() // copia l’array per non mutarlo
+                  .slice()
                   .sort(
                     (a, b) =>
                       new Date(b.data).getTime() - new Date(a.data).getTime()
-                  ) // ordina per data (più recente prima)
+                  )
                   .map((t) => (
                     <li
                       key={t.id}
                       className="list-group-item d-flex justify-content-between align-items-center"
                     >
                       <div>
-                        <strong>{t.categoria}</strong> — €{t.importo.toFixed(2)}
+                        <strong>{t.categoria}</strong> — €
+                        {Number(t.importo).toFixed(2)}
                         {t.descrizione && (
                           <div className="text-muted small fst-italic mt-1">
                             “{t.descrizione}”
@@ -301,11 +291,26 @@ export default function PieChartFinance({
       {/* GRAFICI E TOTALE MENSILE */}
       <div className="row">
         {[
-          { title: "Entrate", color: "text-success", data: entrateData },
-          { title: "Uscite", color: "text-danger", data: usciteData },
-          { title: "Risparmi", color: "text-primary", data: risparmiData },
-        ].map(({ title, color, data }, i) => (
-          <div key={i} className="col-lg-4 col-md-6 col-12 mb-4">
+          {
+            title: "Entrate",
+            color: "text-success",
+            data: entrateData,
+            id: "chart-entrate",
+          },
+          {
+            title: "Uscite",
+            color: "text-danger",
+            data: usciteData,
+            id: "chart-uscite",
+          },
+          {
+            title: "Risparmi",
+            color: "text-primary",
+            data: risparmiData,
+            id: "chart-risparmi",
+          },
+        ].map(({ title, color, data, id }, i) => (
+          <div key={i} className="col-lg-4 col-md-6 col-12 mb-4" id={id}>
             <h5 className={`text-center ${color}`}>{title}</h5>
             {data.length > 0 ? (
               <div style={{ width: "100%", height: 350 }}>
@@ -322,7 +327,7 @@ export default function PieChartFinance({
                         <Cell key={j} fill={COLORS[j % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip formatter={(v) => `€${Number(v).toFixed(2)}`} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>

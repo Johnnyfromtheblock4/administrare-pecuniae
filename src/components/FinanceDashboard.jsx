@@ -9,12 +9,12 @@ import {
   updateDoc,
   getDoc,
 } from "firebase/firestore";
-
 import AccountManager from "./AccountManager";
 import TransactionForm from "./TransactionForm";
 import TransactionTable from "./TransactionTable";
 import CategoryManager from "./CategoryManager";
 import PieChartFinance from "./PieChartFinance";
+import { handleGeneratePDF } from "../utils/pdfUtils";
 
 export default function FinanceDashboard() {
   const [user, setUser] = useState(null);
@@ -25,7 +25,6 @@ export default function FinanceDashboard() {
   const [chartAccountId, setChartAccountId] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-
   const [alertMessage, setAlertMessage] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
 
@@ -33,7 +32,6 @@ export default function FinanceDashboard() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser || null);
-
       if (currentUser) {
         try {
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
@@ -47,7 +45,6 @@ export default function FinanceDashboard() {
         setUserData(null);
       }
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -94,7 +91,6 @@ export default function FinanceDashboard() {
   // Conferma eliminazione e aggiorna saldo conto
   const confirmDeleteTransaction = async () => {
     if (!confirmDelete) return;
-
     try {
       await deleteDoc(doc(db, "transactions", confirmDelete.id));
 
@@ -128,6 +124,33 @@ export default function FinanceDashboard() {
       setAlertMessage("Errore durante l'eliminazione. Riprova.");
     } finally {
       setConfirmDelete(null);
+    }
+  };
+
+  // Esporta il resoconto mensile in PDF
+  const handleExportMonthlyPDF = async () => {
+    const hasTransactionsThisMonth = transactions.some((t) => {
+      const date = new Date(t.data);
+      return (
+        date.getMonth() === selectedMonth && date.getFullYear() === selectedYear
+      );
+    });
+
+    if (!hasTransactionsThisMonth) {
+      setAlertMessage("Nessuna transazione per questo mese da esportare.");
+      return;
+    }
+
+    try {
+      await handleGeneratePDF({
+        selectedMonth,
+        selectedYear,
+        transactions,
+        accounts,
+      });
+    } catch (error) {
+      console.error("Errore durante l'esportazione del PDF:", error);
+      setAlertMessage("Errore durante l'esportazione del PDF.");
     }
   };
 
@@ -197,6 +220,16 @@ export default function FinanceDashboard() {
         setSelectedYear={setSelectedYear}
         setTransactions={setTransactions}
       />
+
+      {/* Pulsante esportazione PDF mensile */}
+      <div className="text-center mt-4">
+        <button
+          className="btn btn-primary"
+          onClick={handleExportMonthlyPDF}
+        >
+          Esporta resoconto mensile in PDF
+        </button>
+      </div>
 
       {/* Popup alert generico */}
       {alertMessage && (

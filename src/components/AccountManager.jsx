@@ -42,15 +42,6 @@ export default function AccountManager({
 
     if (accounts.length === 0) setChartAccountId(docRef.id);
 
-    setAccounts((prev) => [
-      ...prev,
-      {
-        id: docRef.id,
-        nome: newAccount.nome,
-        saldoIniziale: saldoArrotondato,
-      },
-    ]);
-
     setNewAccount({ nome: "", saldoIniziale: "" });
   };
 

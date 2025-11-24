@@ -64,67 +64,36 @@ export default function FinanceDashboard() {
 
     console.log("🔍 Attivo listener Firestore per uid:", user.uid);
 
-    // --- ACCOUNTS ---
     const accountsRef = collection(db, "accounts");
     const accountsQuery = query(accountsRef, where("uid", "==", user.uid));
 
-    const unsubAccounts = onSnapshot(
-      accountsQuery,
-      (snap) => {
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        console.log("📥 Accounts letti da Firestore:", data);
-        setAccounts(data);
+    const unsubAccounts = onSnapshot(accountsQuery, (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setAccounts(data);
+    });
 
-        // Se non c'è ancora un conto selezionato, imposta il primo
-        if (!chartAccountId && data.length > 0) {
-          setChartAccountId(data[0].id);
-        }
-      },
-      (error) => {
-        console.error("❌ Errore snapshot accounts:", error);
-      }
-    );
-
-    // --- TRANSACTIONS ---
     const txRef = collection(db, "transactions");
     const txQuery = query(txRef, where("uid", "==", user.uid));
 
-    const unsubTransactions = onSnapshot(
-      txQuery,
-      (snap) => {
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        console.log("📥 Transactions lette da Firestore:", data);
-        setTransactions(data);
-      },
-      (error) => {
-        console.error("❌ Errore snapshot transactions:", error);
-      }
-    );
+    const unsubTransactions = onSnapshot(txQuery, (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setTransactions(data);
+    });
 
-    // --- CATEGORIES ---
     const catRef = collection(db, "categories");
     const catQuery = query(catRef, where("uid", "==", user.uid));
 
-    const unsubCategories = onSnapshot(
-      catQuery,
-      (snap) => {
-        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        console.log("📥 Categories lette da Firestore:", data);
-        setCustomCategories(data);
-      },
-      (error) => {
-        console.error("❌ Errore snapshot categories:", error);
-      }
-    );
+    const unsubCategories = onSnapshot(catQuery, (snap) => {
+      const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setCustomCategories(data);
+    });
 
-    // Cleanup listeners quando cambia user o si smonta il componente
     return () => {
-      console.log("🧹 Disattivo listener Firestore");
       unsubAccounts();
       unsubTransactions();
       unsubCategories();
     };
-  }, [user, chartAccountId]);
+  }, [user]); // SOLO user
 
   // Mostra popup di conferma eliminazione
   const handleDeleteTransaction = (t) => {

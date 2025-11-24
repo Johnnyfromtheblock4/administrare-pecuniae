@@ -16,43 +16,42 @@ export default function CategoryManager({
   const [newCategory, setNewCategory] = useState("");
   const [newCategoryType, setNewCategoryType] = useState("entrata");
 
-  // Stato per mostrare/nascondere la card
+  // Stato per mostrare o nascondere la card
   const [isOpen, setIsOpen] = useState(false);
 
   // Stato per la modifica
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({ nome: "", tipo: "" });
 
+  // Aggiunge una categoria a Firestore.
+  // Lo stato non viene aggiornato manualmente perché lo snapshot listener in FinanceDashboard
+  // aggiornerà automaticamente customCategories, evitando duplicazioni.
   const handleAddCategory = async () => {
     if (!newCategory.trim() || !user) return;
 
-    const docRef = await addDoc(collection(db, "categories"), {
+    await addDoc(collection(db, "categories"), {
       nome: newCategory.trim(),
       tipo: newCategoryType,
       uid: user.uid,
     });
 
-    setCustomCategories((prev) => [
-      ...prev,
-      { id: docRef.id, nome: newCategory.trim(), tipo: newCategoryType },
-    ]);
-
     setNewCategory("");
   };
 
+  // Modifica una categoria esistente.
+  // Anche qui, lo snapshot aggiornerà automaticamente lo stato.
   const handleEditCategory = async (id, nome, tipo) => {
     await updateDoc(doc(db, "categories", id), { nome, tipo });
-    setCustomCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, nome, tipo } : c))
-    );
     setEditId(null);
   };
 
+  // Elimina una categoria.
+  // Nessun aggiornamento manuale di stato per evitare duplicazioni, ci pensa lo snapshot.
   const handleDeleteCategory = async (id) => {
     if (!window.confirm("Vuoi davvero eliminare questa categoria?")) return;
+
     try {
       await deleteDoc(doc(db, "categories", id));
-      setCustomCategories((prev) => prev.filter((c) => c.id !== id));
     } catch (error) {
       console.error("Errore eliminazione categoria:", error);
       alert("Errore durante l'eliminazione. Riprova.");
@@ -61,17 +60,16 @@ export default function CategoryManager({
 
   return (
     <div className="card p-3 mb-4">
-      {/* HEADER DELLA CARD */}
+      {/* Header della card */}
       <div className="d-flex justify-content-between align-items-center">
         <h4
           className="fw-semibold mb-3 mb-md-0"
           style={{ cursor: "pointer" }}
-          onClick={() => setIsOpen(!isOpen)} // clic sul titolo per aprire/chiudere
+          onClick={() => setIsOpen(!isOpen)}
         >
-          🖇️ Categorie Personalizzate
+          Categorie Personalizzate
         </h4>
 
-        {/* Pulsante con icona Font Awesome */}
         <button className="btn btn-primary" onClick={() => setIsOpen(!isOpen)}>
           {isOpen ? (
             <i className="fa-solid fa-minus"></i>
@@ -81,10 +79,10 @@ export default function CategoryManager({
         </button>
       </div>
 
-      {/* CONTENUTO VISIBILE SOLO QUANDO LA CARD È APERTA */}
+      {/* Contenuto visibile solo quando la card è aperta */}
       {isOpen && (
         <>
-          {/* Form responsive */}
+          {/* Form di aggiunta categoria */}
           <div className="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2 mb-3 mt-3">
             <input
               type="text"
@@ -93,6 +91,7 @@ export default function CategoryManager({
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
             />
+
             <select
               className="form-select flex-grow-1 flex-md-grow-0 w-100 w-md-auto"
               value={newCategoryType}
@@ -102,6 +101,7 @@ export default function CategoryManager({
               <option value="uscita">Uscita</option>
               <option value="risparmio">Risparmio</option>
             </select>
+
             <button
               className="btn btn-primary w-100 w-md-auto"
               onClick={handleAddCategory}
@@ -129,6 +129,7 @@ export default function CategoryManager({
                           setEditData({ ...editData, nome: e.target.value })
                         }
                       />
+
                       <select
                         className="form-select"
                         value={editData.tipo}
@@ -149,13 +150,14 @@ export default function CategoryManager({
                           handleEditCategory(c.id, editData.nome, editData.tipo)
                         }
                       >
-                        💾 Salva
+                        Salva
                       </button>
+
                       <button
                         className="btn btn-sm btn-secondary"
                         onClick={() => setEditId(null)}
                       >
-                        ❌ Annulla
+                        Annulla
                       </button>
                     </div>
                   </>
@@ -179,6 +181,7 @@ export default function CategoryManager({
                       >
                         Modifica
                       </button>
+
                       <button
                         className="btn btn-sm btn-danger"
                         onClick={() => handleDeleteCategory(c.id)}

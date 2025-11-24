@@ -20,6 +20,7 @@ export default function TransactionTable({
   // Stato per la modifica
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
+  const [originalData, setOriginalData] = useState(null);
 
   const months = [
     "Gennaio",
@@ -70,17 +71,18 @@ export default function TransactionTable({
       </div>
     );
 
-  // Salvataggio con arrotondamento
+  // Salvataggio con arrotondamento e callback verso il genitore
   const handleSaveEdit = () => {
-    if (onEdit && editId) {
+    if (onEdit && editId && originalData) {
       const updated = {
         ...editData,
         importo: toMoney(editData.importo),
       };
-      onEdit(editId, updated);
+      onEdit(editId, updated, originalData);
     }
     setEditId(null);
     setEditData({});
+    setOriginalData(null);
   };
 
   return (
@@ -227,11 +229,15 @@ export default function TransactionTable({
                                       type="number"
                                       step="0.01"
                                       className="form-control"
-                                      value={editData.importo}
+                                      value={
+                                        editData.importo !== undefined
+                                          ? editData.importo
+                                          : t.importo
+                                      }
                                       onChange={(e) =>
                                         setEditData({
                                           ...editData,
-                                          importo: toMoney(e.target.value),
+                                          importo: e.target.value,
                                         })
                                       }
                                     />
@@ -246,7 +252,11 @@ export default function TransactionTable({
                                     </button>
                                     <button
                                       className="btn btn-sm btn-secondary"
-                                      onClick={() => setEditId(null)}
+                                      onClick={() => {
+                                        setEditId(null);
+                                        setEditData({});
+                                        setOriginalData(null);
+                                      }}
                                     >
                                       Annulla
                                     </button>
@@ -282,6 +292,7 @@ export default function TransactionTable({
                                       onClick={() => {
                                         setEditId(t.id);
                                         setEditData(t);
+                                        setOriginalData(t);
                                       }}
                                     >
                                       Modifica

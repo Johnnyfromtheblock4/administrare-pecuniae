@@ -139,6 +139,90 @@ export default function FinanceDashboard() {
     }
   };
 
+  // Modifica transazione con ricalcolo saldo (Modalità A)
+  const handleEditTransaction = async (id, updatedData, originalData) => {
+    try {
+      const oldTx = originalData;
+      const newTx = updatedData;
+
+      const oldAccount = accounts.find((a) => a.id === oldTx.conto);
+      const newAccount = accounts.find((a) => a.id === newTx.conto);
+
+      if (!oldAccount || !newAccount) {
+        console.error("Conto non trovato per la transazione modificata");
+        setAlertMessage(
+          "Impossibile aggiornare il saldo: conto associato non trovato."
+        );
+        return;
+      }
+
+      const oldImporto = Number(oldTx.importo);
+      const newImporto = Number(newTx.importo);
+
+      if (oldAccount.id === newAccount.id) {
+        let saldo = Number(oldAccount.saldoIniziale);
+
+        if (oldTx.type === "entrata") saldo -= oldImporto;
+        else if (oldTx.type === "uscita" || oldTx.type === "risparmio")
+          saldo += oldImporto;
+
+        if (newTx.type === "entrata") saldo += newImporto;
+        else if (newTx.type === "uscita" || newTx.type === "risparmio")
+          saldo -= newImporto;
+
+        await updateDoc(doc(db, "accounts", oldAccount.id), {
+          saldoIniziale: saldo,
+        });
+
+        setAccounts((prev) =>
+          prev.map((a) =>
+            a.id === oldAccount.id ? { ...a, saldoIniziale: saldo } : a
+          )
+        );
+      } else {
+        let saldoOld = Number(oldAccount.saldoIniziale);
+        if (oldTx.type === "entrata") saldoOld -= oldImporto;
+        else if (oldTx.type === "uscita" || oldTx.type === "risparmio")
+          saldoOld += oldImporto;
+
+        let saldoNew = Number(newAccount.saldoIniziale);
+        if (newTx.type === "entrata") saldoNew += newImporto;
+        else if (newTx.type === "uscita" || newTx.type === "risparmio")
+          saldoNew -= newImporto;
+
+        await updateDoc(doc(db, "accounts", oldAccount.id), {
+          saldoIniziale: saldoOld,
+        });
+        await updateDoc(doc(db, "accounts", newAccount.id), {
+          saldoIniziale: saldoNew,
+        });
+
+        setAccounts((prev) =>
+          prev.map((a) => {
+            if (a.id === oldAccount.id) {
+              return { ...a, saldoIniziale: saldoOld };
+            }
+            if (a.id === newAccount.id) {
+              return { ...a, saldoIniziale: saldoNew };
+            }
+            return a;
+          })
+        );
+      }
+
+      await updateDoc(doc(db, "transactions", id), newTx);
+
+      setTransactions((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, ...newTx } : t))
+      );
+
+      setAlertMessage("Transazione aggiornata e saldo ricalcolato.");
+    } catch (error) {
+      console.error("Errore durante la modifica della transazione:", error);
+      setAlertMessage("Errore durante la modifica della transazione.");
+    }
+  };
+
   // Esporta il resoconto mensile in PDF
   const handleExportMonthlyPDF = async () => {
     const hasTransactionsThisMonth = transactions.some((t) => {
@@ -218,6 +302,7 @@ export default function FinanceDashboard() {
         transactions={transactions}
         accounts={accounts}
         onDelete={handleDeleteTransaction}
+        onEdit={handleEditTransaction}
       />
 
       {/* Grafico analisi finanziaria */}

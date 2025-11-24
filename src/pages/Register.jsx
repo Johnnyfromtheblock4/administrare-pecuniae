@@ -8,13 +8,15 @@ export default function Register() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [popupMessage, setPopupMessage] = useState(""); // stato popup
+
   const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
 
     if (!username.trim()) {
-      alert("Inserisci un nome utente valido.");
+      setPopupMessage("Inserisci un nome utente valido.");
       return;
     }
 
@@ -34,17 +36,18 @@ export default function Register() {
         createdAt: new Date(),
       });
 
-      alert("Registrazione completata!");
-      navigate("/login");
+      // Mostra popup e redirect
+      setPopupMessage("Registrazione completata!");
+      setTimeout(() => navigate("/login"), 1200);
     } catch (error) {
       if (error.code === "auth/email-already-in-use") {
-        alert("Questa email è già registrata. Prova ad accedere.");
+        setPopupMessage("Questa email è già registrata. Prova ad accedere.");
       } else if (error.code === "auth/invalid-email") {
-        alert("L'email inserita non è valida.");
+        setPopupMessage("L'email inserita non è valida.");
       } else if (error.code === "auth/weak-password") {
-        alert("La password deve avere almeno 6 caratteri.");
+        setPopupMessage("La password deve avere almeno 6 caratteri.");
       } else {
-        alert("Errore: " + error.message);
+        setPopupMessage("Errore: " + error.message);
       }
     }
   };
@@ -52,6 +55,7 @@ export default function Register() {
   return (
     <div className="container text-center my-5">
       <h2>Registrati</h2>
+
       <form
         onSubmit={handleRegister}
         className="d-flex flex-column align-items-center gap-3 mt-4"
@@ -74,6 +78,7 @@ export default function Register() {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
+
         <input
           type="password"
           className="form-control w-50"
@@ -82,10 +87,38 @@ export default function Register() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+
         <button type="submit" className="btn btn-success w-50">
           Crea account
         </button>
       </form>
+
+      {/* POPUP STILIZZATO */}
+      {popupMessage && (
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)", zIndex: 1050 }}
+        >
+          <div
+            className="p-4 rounded shadow text-center"
+            style={{
+              backgroundColor: "#f7efde",
+              color: "black",
+              width: "90%",
+              maxWidth: "400px",
+            }}
+          >
+            <h6 className="mb-3 fw-semibold">Avviso</h6>
+            <p>{popupMessage}</p>
+            <button
+              className="btn btn-primary mt-2"
+              onClick={() => setPopupMessage("")}
+            >
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

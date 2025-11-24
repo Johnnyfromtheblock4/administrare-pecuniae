@@ -8,6 +8,8 @@ import {
   doc,
   updateDoc,
   getDoc,
+  query,
+  where,
 } from "firebase/firestore";
 import AccountManager from "./AccountManager";
 import TransactionForm from "./TransactionForm";
@@ -32,56 +34,97 @@ export default function FinanceDashboard() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser || null);
+
       if (currentUser) {
         try {
+          console.log("✅ Utente loggato:", currentUser.uid);
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
           if (userDoc.exists()) {
             setUserData(userDoc.data());
+          } else {
+            console.warn("Nessun documento utente in Firestore per questo uid");
           }
         } catch (error) {
           console.error("Errore nel recupero dati utente:", error);
         }
       } else {
+        console.log("ℹ️ Nessun utente loggato");
         setUserData(null);
       }
     });
+
     return () => unsubscribe();
   }, []);
 
   // Carica dati in tempo reale da Firestore
+  // IMPORTANTISSIMO: usiamo query(..., where("uid", "==", user.uid))
+  // così le query rispettano le regole di sicurezza Firestore
   useEffect(() => {
     if (!user) return;
 
-    const unsubAccounts = onSnapshot(collection(db, "accounts"), (snap) => {
-      const data = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
-        .filter((acc) => acc.uid === user.uid);
-      setAccounts(data);
-    });
+    console.log("🔍 Attivo listener Firestore per uid:", user.uid);
 
-    const unsubTransactions = onSnapshot(
-      collection(db, "transactions"),
+    // --- ACCOUNTS ---
+    const accountsRef = collection(db, "accounts");
+    const accountsQuery = query(accountsRef, where("uid", "==", user.uid));
+
+    const unsubAccounts = onSnapshot(
+      accountsQuery,
       (snap) => {
-        const data = snap.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
-          .filter((tx) => tx.uid === user.uid);
-        setTransactions(data);
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        console.log("📥 Accounts letti da Firestore:", data);
+        setAccounts(data);
+
+        // Se non c'è ancora un conto selezionato, imposta il primo
+        if (!chartAccountId && data.length > 0) {
+          setChartAccountId(data[0].id);
+        }
+      },
+      (error) => {
+        console.error("❌ Errore snapshot accounts:", error);
       }
     );
 
-    const unsubCategories = onSnapshot(collection(db, "categories"), (snap) => {
-      const data = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
-        .filter((c) => c.uid === user.uid);
-      setCustomCategories(data);
-    });
+    // --- TRANSACTIONS ---
+    const txRef = collection(db, "transactions");
+    const txQuery = query(txRef, where("uid", "==", user.uid));
 
+    const unsubTransactions = onSnapshot(
+      txQuery,
+      (snap) => {
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        console.log("📥 Transactions lette da Firestore:", data);
+        setTransactions(data);
+      },
+      (error) => {
+        console.error("❌ Errore snapshot transactions:", error);
+      }
+    );
+
+    // --- CATEGORIES ---
+    const catRef = collection(db, "categories");
+    const catQuery = query(catRef, where("uid", "==", user.uid));
+
+    const unsubCategories = onSnapshot(
+      catQuery,
+      (snap) => {
+        const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        console.log("📥 Categories lette da Firestore:", data);
+        setCustomCategories(data);
+      },
+      (error) => {
+        console.error("❌ Errore snapshot categories:", error);
+      }
+    );
+
+    // Cleanup listeners quando cambia user o si smonta il componente
     return () => {
+      console.log("🧹 Disattivo listener Firestore");
       unsubAccounts();
       unsubTransactions();
       unsubCategories();
     };
-  }, [user]);
+  }, [user, chartAccountId]);
 
   // Mostra popup di conferma eliminazione
   const handleDeleteTransaction = (t) => {
